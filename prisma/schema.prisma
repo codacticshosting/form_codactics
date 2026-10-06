@@ -1,0 +1,114 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// Control-plane data only: admin accounts and form definitions/routing.
+// Actual submissions and uploaded files go either to the admin's own
+// Google Sheet/Drive, or (if "local" storage is chosen) into this same
+// database + this server's own disk — never stored here otherwise.
+model Admin {
+  id                 String   @id @default(cuid())
+  email              String   @unique
+  name               String?
+  image              String?
+  googleRefreshToken String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // Per-admin override of the normal draft/publish caps (see
+  // src/lib/form-limits.ts), settable only from the super-admin control
+  // panel. null = use the standard default for every other admin.
+  maxDrafts    Int?
+  maxPublished Int?
+
+  // Gates whether this admin can set a per-access-code login limit on
+  // their forms' Access control settings (see FormAccessCode below) —
+  // granted/revoked per admin from the super-admin control panel, off by
+  // default.
+  loginLimitFeatureEnabled Boolean @default(false)
+
+  forms Form[]
+}
+
+model Form {
+  id                  String   @id @default(cuid())
+  adminId             String
+  admin               Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  slug                String   @unique
+  title               String
+  status              String   @default("draft") // "draft" | "published"
+  schema              String // JSON-encoded FormField[]
+  theme               String // JSON-encoded FormTheme
+  storageProvider     String   @default("google") // "google" | "local"
+  googleSheetId       String?
+  googleDriveFolderId String?
+  closeMode           String? // null (open) | "deadline" | "manual"
+  closesAt            DateTime? // absolute UTC instant; only meaningful when closeMode = "deadline"
+  closeTimezoneLabel  String? // e.g. "Eastern Time (EST, UTC-05:00)" — for redisplay only, not used in the comparison
+  requireAccessCode   Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  publishedAt         DateTime?
+
+  submissions Submission[]
+  accessCodes FormAccessCode[]
+}
+
+// Per-visitor username/password pairs an admin can set up to gate access
+// to the public form. Passwords are never stored in plain text.
+model FormAccessCode {
+  id           String   @id @default(cuid())
+  formId       String
+  form         Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  username     String
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  // Only meaningful when the owning admin has loginLimitFeatureEnabled —
+  // maxLogins null = unlimited. loginCount increments on every successful
+  // password check (not once per "session"), and the admin can reset it
+  // or raise maxLogins from the Access control settings at any time.
+  maxLogins  Int?
+  loginCount Int @default(0)
+
+  // Brute-force protection — independent of loginLimitFeatureEnabled and
+  // always enforced, unlike maxLogins above. failedAttempts counts
+  // consecutive wrong-password tries and resets to 0 on any correct one;
+  // after 5 it locks this username out until lockedUntil passes.
+  failedAttempts Int       @default(0)
+  lockedUntil    DateTime?
+
+  @@unique([formId, username])
+}
+
+// Fixed-window request counter shared by both public form submission and
+// access-code login attempts — one row per (kind, key) bucket, where key
+// is typically `${formId}:${ip}`. Whoever calls checkRateLimit() in
+// src/lib/rate-limit.ts owns resetting/expiring it; this table has no
+// cleanup job of its own (rows are tiny and effectively self-resetting).
+model RateLimitBucket {
+  id          String   @id @default(cuid())
+  kind        String
+  key         String
+  count       Int      @default(0)
+  windowStart DateTime @default(now())
+
+  @@unique([kind, key])
+}
+
+// Only populated for forms published with storageProvider = "local".
+model Submission {
+  id          String   @id @default(cuid())
+  formId      String
+  form        Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  submittedAt DateTime @default(now())
+  dataJson    String // JSON-encoded { answers, playerListEntries }
+}

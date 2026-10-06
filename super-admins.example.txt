@@ -1,0 +1,6 @@
+# Copy this file to super-admins.txt and list one Gmail username per line
+# (just the part before @gmail.com — it's added automatically). Only Gmail
+# addresses are supported. Blank lines and lines starting with # are ignored.
+# Anyone listed here sees the "Control panel" link after signing in.
+
+codactics
