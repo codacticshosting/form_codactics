@@ -3,13 +3,15 @@ import Google from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
 
 // Scopes: identity (openid/email/profile) plus narrow, app-created-file-only
-// access to Sheets/Drive — never broad access to the admin's whole Drive.
+// access to Drive — never broad access to the admin's whole Drive. drive.file
+// also covers the Sheets API for spreadsheets this app creates, so the
+// sensitive `spreadsheets` scope (and its Google verification review) isn't
+// needed.
 const GOOGLE_SCOPES = [
   "openid",
   "email",
   "profile",
   "https://www.googleapis.com/auth/drive.file",
-  "https://www.googleapis.com/auth/spreadsheets",
 ].join(" ");
 
 export const { handlers, auth, signIn, signOut } = NextAuth({

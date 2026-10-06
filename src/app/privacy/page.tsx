@@ -94,7 +94,7 @@ export default function PrivacyPolicyPage() {
             <code className="rounded bg-royal-50 px-1 py-0.5 text-xs">
               drive.file
             </code>
-            ), plus spreadsheet read/write for the Sheet this app creates for
+            ), which also covers the response Sheet this app creates for
             you. We cannot see, list, or modify any other file already in
             your Drive. This access is used for exactly one purpose: creating
             a spreadsheet and folder for a form you publish, and writing that
