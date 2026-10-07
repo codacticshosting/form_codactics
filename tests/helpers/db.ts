@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 // next — cheap enough on SQLite to just do for every test rather than
 // reasoning about which tables a given test actually touched.
 export async function resetDb() {
+  await prisma.contactMessage.deleteMany();
   await prisma.submission.deleteMany();
   await prisma.rateLimitBucket.deleteMany();
   await prisma.formAccessCode.deleteMany();

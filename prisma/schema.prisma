@@ -35,7 +35,8 @@ model Admin {
   // default.
   loginLimitFeatureEnabled Boolean @default(false)
 
-  forms Form[]
+  forms           Form[]
+  contactMessages ContactMessage[]
 }
 
 model Form {
@@ -102,6 +103,32 @@ model RateLimitBucket {
   windowStart DateTime @default(now())
 
   @@unique([kind, key])
+}
+
+// Messages sent through the site-wide contact widget, read by super-admins
+// in the control-panel inbox. Deliberately no IP column — the widget's
+// rate limiting goes through RateLimitBucket instead. Rows expire on a
+// per-status schedule (see CONTACT_RETENTION_DAYS in
+// src/lib/contact-messages.ts), purged lazily whenever the inbox is opened.
+model ContactMessage {
+  id         String    @id @default(cuid())
+  createdAt  DateTime  @default(now())
+  name       String?
+  email      String
+  message    String
+  source     String    @default("widget") // "widget" | "feature-request"
+  // Set when the sender was signed in at the time — null for anonymous
+  // visitors, and cleared (not cascaded) if that admin is later deleted.
+  adminId    String?
+  admin      Admin?    @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  status     String    @default("new") // "new" | "read" | "archived" | "deleted"
+  // Each status's retention clock starts from its own timestamp: "new"
+  // from createdAt, "read" from readAt, and so on.
+  readAt     DateTime?
+  archivedAt DateTime?
+  deletedAt  DateTime?
+
+  @@index([status, createdAt])
 }
 
 // Only populated for forms published with storageProvider = "local".

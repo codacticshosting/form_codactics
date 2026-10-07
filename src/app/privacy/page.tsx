@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { SITE_NAME } from "@/lib/site-config";
+import { CONTACT_RETENTION_DAYS } from "@/lib/contact-messages";
 
 export const metadata = {
   title: "Privacy Policy",
 };
 
-const LAST_UPDATED = "October 6, 2026";
+const LAST_UPDATED = "October 7, 2026";
 
 export default function PrivacyPolicyPage() {
   return (
@@ -63,10 +64,23 @@ export default function PrivacyPolicyPage() {
             never recoverable by us.
           </p>
           <p>
+            <strong className="text-royal-900">Contact messages:</strong>{" "}
+            when you write to us through the contact widget, we store your
+            name (if given), email address, and message on our server in the
+            EU, solely so we can read and answer it. We don&apos;t store your
+            IP address with it. Unread messages are deleted after{" "}
+            {CONTACT_RETENTION_DAYS.new} days, read ones{" "}
+            {CONTACT_RETENTION_DAYS.read} days after being read, archived ones{" "}
+            {CONTACT_RETENTION_DAYS.archived} days after archiving, and
+            deleted ones are removed for good after{" "}
+            {CONTACT_RETENTION_DAYS.deleted} days.
+          </p>
+          <p>
             <strong className="text-royal-900">Technical data:</strong> we
             keep a short-lived record of IP addresses and submission/login
             timestamps solely to detect and slow down spam and
-            password-guessing attempts on published forms. This isn&apos;t
+            password-guessing attempts on published forms and the contact
+            widget. This isn&apos;t
             used for tracking or analytics, and isn&apos;t linked to any
             personal profile.
           </p>

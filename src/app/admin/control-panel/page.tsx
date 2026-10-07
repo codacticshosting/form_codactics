@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Inbox } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isSuperAdminEmail } from "@/lib/super-admin";
@@ -23,10 +23,13 @@ export default async function ControlPanelPage() {
     notFound();
   }
 
-  const admins = await prisma.admin.findMany({
-    orderBy: { createdAt: "asc" },
-    include: { forms: { select: { status: true } } },
-  });
+  const [admins, newMessageCount] = await Promise.all([
+    prisma.admin.findMany({
+      orderBy: { createdAt: "asc" },
+      include: { forms: { select: { status: true } } },
+    }),
+    prisma.contactMessage.count({ where: { status: "new" } }),
+  ]);
 
   return (
     <div className="flex flex-1 flex-col bg-background">
@@ -43,6 +46,18 @@ export default async function ControlPanelPage() {
             Control panel
           </span>
           <div className="flex-1" />
+          <Link
+            href="/admin/control-panel/inbox"
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-royal-200 px-3 py-1.5 text-sm font-medium text-royal-600 hover:bg-royal-50"
+          >
+            <Inbox size={16} />
+            Inbox
+            {newMessageCount > 0 && (
+              <span className="rounded-full bg-royal-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                {newMessageCount} new
+              </span>
+            )}
+          </Link>
           <UserMenu />
         </div>
       </header>

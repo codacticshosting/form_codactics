@@ -1,22 +1,62 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { MessageCircle, X, Send } from "lucide-react";
 import {
   OPEN_CONTACT_WIDGET_EVENT,
   type OpenContactWidgetDetail,
 } from "@/lib/contact-widget";
+import {
+  getContactPrefillEmail,
+  submitContactMessage,
+  type SubmitContactMessageResult,
+} from "@/lib/contact-actions";
+import {
+  CONTACT_MESSAGE_MAX,
+  CONTACT_NAME_MAX,
+  type ContactMessageSource,
+} from "@/lib/contact-messages";
 
-// Frontend-only for now — handleSubmit below is a placeholder. Wherever
-// the message actually ends up (mailto, stored via Prisma, emailed
-// through a service) still needs to be decided and wired in there.
+function errorText(result: Exclude<SubmitContactMessageResult, { ok: true }>): string {
+  switch (result.error) {
+    case "invalid-email":
+      return "Please enter a valid email address.";
+    case "invalid-name":
+      return `Please keep your name under ${CONTACT_NAME_MAX} characters.`;
+    case "invalid-message":
+      return `Please write a message (up to ${CONTACT_MESSAGE_MAX} characters).`;
+    case "rate-limited":
+      return `Too many messages from this connection. Please try again in ${result.retryAfter}.`;
+  }
+}
+
+// Messages are stored server-side (see contact-actions.ts) and read by
+// super-admins in the control-panel inbox.
 export function ContactWidget() {
   const [open, setOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
+  // Hidden from real visitors — see the honeypot note in contact-actions.ts.
+  const [website, setWebsite] = useState("");
+  const [source, setSource] = useState<ContactMessageSource>("widget");
+  const [error, setError] = useState<string | null>(null);
+  const [isSending, startSending] = useTransition();
+  const prefillTried = useRef(false);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  // Pre-fill a signed-in admin's email the first time the widget opens —
+  // once only, and never over something the visitor already typed.
+  useEffect(() => {
+    if (!open || prefillTried.current) return;
+    prefillTried.current = true;
+    getContactPrefillEmail()
+      .then((prefill) => {
+        if (prefill) setEmail((current) => current || prefill);
+      })
+      .catch(() => {});
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -36,7 +76,11 @@ export function ContactWidget() {
     function handleOpenRequest(e: Event) {
       const detail = (e as CustomEvent<OpenContactWidgetDetail>).detail;
       setSubmitted(false);
-      if (detail?.prefillMessage) setMessage(detail.prefillMessage);
+      setError(null);
+      if (detail?.prefillMessage) {
+        setMessage(detail.prefillMessage);
+        setSource("feature-request");
+      }
       setOpen(true);
     }
     window.addEventListener(OPEN_CONTACT_WIDGET_EVENT, handleOpenRequest);
@@ -45,9 +89,20 @@ export function ContactWidget() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // TODO: deliver { name, email, message } somewhere real — mailto,
-    // a Prisma-stored inbox, or an email service. Not wired up yet.
-    setSubmitted(true);
+    setError(null);
+    startSending(async () => {
+      try {
+        const result = await submitContactMessage({ name, email, message, source, website });
+        if (result.ok) {
+          setSubmitted(true);
+        } else {
+          // Everything typed stays in place so the visitor can fix and resend.
+          setError(errorText(result));
+        }
+      } catch {
+        setError("Something went wrong sending your message. Please try again.");
+      }
+    });
   }
 
   function resetAndClose() {
@@ -57,6 +112,10 @@ export function ContactWidget() {
       setName("");
       setEmail("");
       setMessage("");
+      setWebsite("");
+      setSource("widget");
+      setError(null);
+      prefillTried.current = false;
     }, 200);
   }
 
@@ -86,7 +145,7 @@ export function ContactWidget() {
               <div className="flex flex-col items-center gap-3 py-6 text-center">
                 <span className="text-3xl">👋</span>
                 <p className="text-sm font-medium text-royal-950">
-                  Thanks — we&apos;ll get back to you soon!
+                  Thanks — we&apos;ll get back to you by email soon!
                 </p>
                 <button
                   type="button"
@@ -107,6 +166,7 @@ export function ContactWidget() {
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    maxLength={CONTACT_NAME_MAX}
                     placeholder="Name (optional)"
                     className="w-full rounded-md border border-royal-200 px-3 py-2 text-sm text-royal-950 focus:border-royal-500 focus:outline-none"
                   />
@@ -122,16 +182,35 @@ export function ContactWidget() {
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     required
+                    maxLength={CONTACT_MESSAGE_MAX}
                     rows={3}
                     placeholder="How can we help?"
                     className="w-full resize-none rounded-md border border-royal-200 px-3 py-2 text-sm text-royal-950 focus:border-royal-500 focus:outline-none"
                   />
+                  {/* Honeypot: off-screen rather than display:none, since
+                      some bots skip fields that are plainly hidden. */}
+                  <input
+                    type="text"
+                    name="website"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
+                    tabIndex={-1}
+                    autoComplete="off"
+                    aria-hidden="true"
+                    className="absolute -left-[9999px] h-px w-px opacity-0"
+                  />
+                  {error && (
+                    <p role="alert" className="text-xs text-red-600">
+                      {error}
+                    </p>
+                  )}
                   <button
                     type="submit"
-                    className="flex items-center justify-center gap-1.5 rounded-full bg-royal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-royal-700"
+                    disabled={isSending}
+                    className="flex items-center justify-center gap-1.5 rounded-full bg-royal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-royal-700 disabled:cursor-wait disabled:opacity-70"
                   >
                     <Send size={14} />
-                    Send message
+                    {isSending ? "Sending…" : "Send message"}
                   </button>
                 </form>
               </>
