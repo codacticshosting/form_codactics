@@ -30,7 +30,7 @@ export default function PrivacyPolicyPage() {
         <p className="text-xs text-royal-400">Last updated: {LAST_UPDATED}</p>
 
         <p>
-          {SITE_NAME} (&quot;Codactis&quot;, &quot;we&quot;, &quot;us&quot;) is a form-building
+          {SITE_NAME} (&quot;Codactics&quot;, &quot;we&quot;, &quot;us&quot;) is a form-building
           tool for tournament and event registration. This page explains what
           data we collect, how it&apos;s used, and the choices you have —
           both as a form creator (&quot;admin&quot;) who signs in to build forms, and
@@ -100,7 +100,7 @@ export default function PrivacyPolicyPage() {
             a spreadsheet and folder for a form you publish, and writing that
             form&apos;s responses into them as they come in. We don&apos;t
             read, share, sell, or use this data for advertising, and no
-            human at Codactis views it as part of normal operation.
+            human at Codactics views it as part of normal operation.
           </p>
         </section>
 

@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     "tournament registration form",
     "event registration form",
     "create forms online",
-    "Codactis",
+    "Codactics",
   ],
   icons: {
     icon: "/favicon.ico",

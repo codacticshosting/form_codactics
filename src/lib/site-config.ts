@@ -6,6 +6,6 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://form.codac
   "",
 );
 
-export const SITE_NAME = "Codactis Form Builder";
+export const SITE_NAME = "Codactics Form Builder";
 export const SITE_DESCRIPTION =
-  "Codactis is a free online form builder for tournament and event registration — build, publish, and collect responses in minutes, with access codes, file uploads, e-signatures, and exports to Google Sheets.";
+  "Codactics is a free online form builder for tournament and event registration — build, publish, and collect responses in minutes, with access codes, file uploads, e-signatures, and exports to Google Sheets.";

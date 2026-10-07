@@ -102,7 +102,7 @@ export default async function Home() {
           >
             <Image
               src="/logo/codactics.png"
-              alt="Codactis logo"
+              alt="Codactics logo"
               width={20}
               height={20}
               className="rounded"
@@ -126,7 +126,7 @@ export default async function Home() {
       <div className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-24">
         <Image
           src="/logo/codactics.gif"
-          alt="Codactis logo"
+          alt="Codactics logo"
           width={96}
           height={96}
           unoptimized
@@ -136,7 +136,7 @@ export default async function Home() {
 
         <div className="flex flex-col items-center gap-2 text-center">
           <h1 className="text-3xl font-semibold tracking-tight text-royal-950 sm:text-4xl">
-            Codactis Form Builder
+            Codactics Form Builder
           </h1>
           <p className="whitespace-nowrap text-sm font-bold text-royal-600">
             Build and publish any forms in minutes and with few clicks.
@@ -167,7 +167,7 @@ export default async function Home() {
         </div>
 
         <p className="max-w-2xl text-center text-sm leading-relaxed text-royal-500">
-          Codactis is a free online form builder built for tournament and
+          Codactics is a free online form builder built for tournament and
           event registration. Create a form in minutes, gate it behind an
           access code if you need to, collect responses with file uploads
           and e-signatures, and store them wherever you choose — a
@@ -184,7 +184,7 @@ export default async function Home() {
             </h2>
             <p className="max-w-xl text-sm text-royal-500">
               From a simple sign-up sheet to a fully branded, multi-step
-              tournament registration — Codactis scales with what you need.
+              tournament registration — Codactics scales with what you need.
             </p>
           </div>
 

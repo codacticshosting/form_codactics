@@ -486,7 +486,7 @@ export function FormRenderer({
       let y = margin + headerHeight;
 
       // Admin's own form logo if they set one, otherwise fall back to the
-      // Codactis logo — fetched as a data URL since jsPDF can't reference
+      // Codactics logo — fetched as a data URL since jsPDF can't reference
       // a plain file path.
       const watermarkDataUrl =
         theme?.logo.dataUrl ||
