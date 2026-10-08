@@ -21,8 +21,8 @@ type TabKey = keyof typeof TABS;
 
 const TAB_NOTES: Record<TabKey, string> = {
   inbox: `Unread messages are kept for ${CONTACT_RETENTION_DAYS.new} days, read ones for ${CONTACT_RETENTION_DAYS.read} days after being read.`,
-  archived: `Archived messages are deleted permanently ${CONTACT_RETENTION_DAYS.archived} days after archiving. Restore one to move it back to the inbox.`,
-  trash: `Messages in Trash are deleted permanently ${CONTACT_RETENTION_DAYS.deleted} days after being deleted. Restore one to move it back to the inbox.`,
+  archived: `Archived messages are deleted permanently ${CONTACT_RETENTION_DAYS.archived} days after archiving. Restore one to move it back to the inbox, or delete it permanently right away.`,
+  trash: `Messages in Trash are deleted permanently ${CONTACT_RETENTION_DAYS.deleted} days after being deleted. Restore one to move it back to the inbox, or delete it permanently right away.`,
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;

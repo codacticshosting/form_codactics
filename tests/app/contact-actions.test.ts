@@ -180,6 +180,41 @@ describe("updateContactMessage", () => {
     });
   });
 
+  it("permanently deletes a message from Archived or Trash", async () => {
+    mockSession.current = { user: { email: SUPER_ADMIN_EMAIL } };
+    const archived = await prisma.contactMessage.create({
+      data: { email: "a@x.com", message: "Hi", status: "archived", archivedAt: new Date() },
+    });
+    const trashed = await prisma.contactMessage.create({
+      data: { email: "b@x.com", message: "Hi", status: "deleted", deletedAt: new Date() },
+    });
+
+    expect(await updateContactMessage(archived.id, "purge")).toEqual({ ok: true });
+    expect(await updateContactMessage(trashed.id, "purge")).toEqual({ ok: true });
+    expect(await prisma.contactMessage.count()).toBe(0);
+  });
+
+  it("refuses to permanently delete a message still in the inbox", async () => {
+    mockSession.current = { user: { email: SUPER_ADMIN_EMAIL } };
+    const fresh = await createMessage();
+    const read = await prisma.contactMessage.create({
+      data: { email: "r@x.com", message: "Hi", status: "read", readAt: new Date() },
+    });
+
+    expect(await updateContactMessage(fresh.id, "purge")).toEqual({ ok: false, error: "not-allowed" });
+    expect(await updateContactMessage(read.id, "purge")).toEqual({ ok: false, error: "not-allowed" });
+    expect(await prisma.contactMessage.count()).toBe(2);
+  });
+
+  it("refuses permanent deletion to non-super-admins", async () => {
+    const trashed = await prisma.contactMessage.create({
+      data: { email: "b@x.com", message: "Hi", status: "deleted", deletedAt: new Date() },
+    });
+    mockSession.current = { user: { email: "someone@example.com" } };
+    expect(await updateContactMessage(trashed.id, "purge")).toEqual({ ok: false, error: "forbidden" });
+    expect(await prisma.contactMessage.count()).toBe(1);
+  });
+
   it("reports a missing message", async () => {
     mockSession.current = { user: { email: SUPER_ADMIN_EMAIL } };
     expect(await updateContactMessage("does-not-exist", "read")).toEqual({

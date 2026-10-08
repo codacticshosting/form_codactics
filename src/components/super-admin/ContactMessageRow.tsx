@@ -9,8 +9,8 @@ import {
 import type { ContactMessageStatus } from "@/lib/contact-messages";
 
 // Which buttons each status offers — the inbox tab gets read/unread,
-// archive and delete; Archived and Trash only offer a way back (plus
-// moving an archived message on to Trash).
+// archive and delete; Archived and Trash offer a way back, moving an
+// archived message on to Trash, and permanent deletion.
 const ACTIONS: Record<ContactMessageStatus, { action: ContactMessageAction; label: string }[]> = {
   new: [
     { action: "read", label: "Mark read" },
@@ -25,9 +25,15 @@ const ACTIONS: Record<ContactMessageStatus, { action: ContactMessageAction; labe
   archived: [
     { action: "restore", label: "Restore" },
     { action: "delete", label: "Delete" },
+    { action: "purge", label: "Delete permanently" },
   ],
-  deleted: [{ action: "restore", label: "Restore" }],
+  deleted: [
+    { action: "restore", label: "Restore" },
+    { action: "purge", label: "Delete permanently" },
+  ],
 };
+
+const DESTRUCTIVE: ContactMessageAction[] = ["delete", "purge"];
 
 export function ContactMessageRow({
   id,
@@ -55,6 +61,12 @@ export function ContactMessageRow({
   const isNew = status === "new";
 
   function handleAction(action: ContactMessageAction) {
+    if (
+      action === "purge" &&
+      !window.confirm("Delete this message permanently? This can't be undone.")
+    ) {
+      return;
+    }
     startTransition(async () => {
       await updateContactMessage(id, action);
       router.refresh();
@@ -106,8 +118,8 @@ export function ContactMessageRow({
             onClick={() => handleAction(action)}
             disabled={isPending}
             className={
-              action === "delete"
-                ? "rounded-full border border-red-200 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed"
+              DESTRUCTIVE.includes(action)
+                ?"rounded-full border border-red-200 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed"
                 : "rounded-full border border-royal-200 px-3 py-1 text-xs font-medium text-royal-600 hover:bg-royal-50 disabled:cursor-not-allowed"
             }
           >

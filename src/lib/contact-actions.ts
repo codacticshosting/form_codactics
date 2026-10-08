@@ -66,15 +66,22 @@ export async function getContactPrefillEmail(): Promise<string | null> {
   return session?.user?.email ?? null;
 }
 
-export type ContactMessageAction = "read" | "unread" | "archive" | "delete" | "restore";
+export type ContactMessageAction =
+  | "read"
+  | "unread"
+  | "archive"
+  | "delete"
+  | "restore"
+  | "purge";
 
 export type UpdateContactMessageResult =
   | { ok: true }
-  | { ok: false; error: "forbidden" | "not-found" };
+  | { ok: false; error: "forbidden" | "not-found" | "not-allowed" };
 
-// Every inbox action is one status transition. Restoring (from Archived
-// or Trash) brings a message back as "read" with a fresh readAt, so it
-// isn't purged straight away by an old timestamp.
+// Every inbox action is one status transition, except "purge", which
+// removes the row for good. Restoring (from Archived or Trash) brings a
+// message back as "read" with a fresh readAt, so it isn't purged straight
+// away by an old timestamp.
 export async function updateContactMessage(
   messageId: string,
   action: ContactMessageAction,
@@ -88,6 +95,17 @@ export async function updateContactMessage(
 
   const existing = await prisma.contactMessage.findUnique({ where: { id: messageId } });
   if (!existing) return { ok: false, error: "not-found" };
+
+  // Permanent deletion only from Archived or Trash — a message still in
+  // the inbox has to be archived or deleted first, so one stray click
+  // can't destroy it.
+  if (action === "purge") {
+    if (existing.status !== "archived" && existing.status !== "deleted") {
+      return { ok: false, error: "not-allowed" };
+    }
+    await prisma.contactMessage.delete({ where: { id: messageId } });
+    return { ok: true };
+  }
 
   const now = new Date();
   const data = {
