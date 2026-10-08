@@ -20,13 +20,16 @@ import {
   replaceEmbeddedThemeImages,
 } from "@/lib/media-utils";
 import type { FormTheme } from "@/types/theme";
+import { decryptSecret } from "@/lib/secret-box";
 
+// `refreshToken` is the value as stored on the Admin row — encrypted (see
+// secret-box.ts) — and is only decrypted here, right before use.
 export function getGoogleClients(refreshToken: string) {
   const oauth2Client = new google.auth.OAuth2(
     process.env.AUTH_GOOGLE_ID,
     process.env.AUTH_GOOGLE_SECRET,
   );
-  oauth2Client.setCredentials({ refresh_token: refreshToken });
+  oauth2Client.setCredentials({ refresh_token: decryptSecret(refreshToken) });
 
   const drive = google.drive({ version: "v3", auth: oauth2Client });
   const sheets = google.sheets({ version: "v4", auth: oauth2Client });
@@ -354,8 +357,18 @@ export async function uploadFormImagesToDrive({
   const needsTheme = themeHasEmbeddedImage(theme);
   if (!needsFields && !needsTheme) return { fields, theme };
 
-  const { drive } = getGoogleClients(refreshToken);
-  const imagesFolderId = await findOrCreateFolder(drive, "images", formFolderId);
+  // A token that can't be used (revoked at Google, or unreadable after
+  // the encryption key changed) keeps the images embedded rather than
+  // failing the publish/update, same as a failed upload below.
+  let drive: drive_v3.Drive;
+  let imagesFolderId: string;
+  try {
+    ({ drive } = getGoogleClients(refreshToken));
+    imagesFolderId = await findOrCreateFolder(drive, "images", formFolderId);
+  } catch (err) {
+    console.error("Drive image upload setup failed:", err);
+    return { fields, theme };
+  }
   const uploadOne = (dataUrl: string, hint: string) =>
     uploadPublicImage(drive, imagesFolderId, `${sanitizeName(hint)}_${timestampSuffix()}`, dataUrl);
 

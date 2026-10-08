@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
 import { purgeDeletedAccounts } from "@/lib/account-deletion";
+import { encryptSecret } from "@/lib/secret-box";
 
 // Scopes: identity (openid/email/profile) plus narrow, app-created-file-only
 // access to Drive — never broad access to the admin's whole Drive. drive.file
@@ -50,14 +51,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.name ?? undefined,
           image: user.image ?? undefined,
           ...(account?.refresh_token
-            ? { googleRefreshToken: account.refresh_token }
+            ? { googleRefreshToken: encryptSecret(account.refresh_token) }
             : {}),
         },
         create: {
           email: user.email,
           name: user.name ?? undefined,
           image: user.image ?? undefined,
-          googleRefreshToken: account?.refresh_token ?? null,
+          googleRefreshToken: account?.refresh_token
+            ? encryptSecret(account.refresh_token)
+            : null,
         },
       });
 

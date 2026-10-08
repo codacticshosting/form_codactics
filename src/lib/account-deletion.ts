@@ -8,6 +8,7 @@ import { google } from "googleapis";
 import { prisma } from "@/lib/prisma";
 import { ACCOUNT_DELETION_DAYS } from "@/lib/form-limits";
 import { removeFormFiles } from "@/lib/storage-usage";
+import { decryptSecret } from "@/lib/secret-box";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -42,7 +43,7 @@ export async function eraseAccount(adminId: string): Promise<void> {
   if (admin.googleRefreshToken) {
     try {
       const client = new google.auth.OAuth2(process.env.AUTH_GOOGLE_ID, process.env.AUTH_GOOGLE_SECRET);
-      await client.revokeToken(admin.googleRefreshToken);
+      await client.revokeToken(decryptSecret(admin.googleRefreshToken));
     } catch {
       // Already revoked, expired, or Google unreachable — nothing more to do.
     }
