@@ -8,6 +8,7 @@ import {
   STORAGE_WARN_RATIO,
 } from "@/lib/storage-limits";
 import { UsageBar } from "@/components/storage/UsageBar";
+import { RequestStorageButton } from "@/components/storage/RequestStorageButton";
 
 // A form's own average only says something once it has a few responses.
 const MIN_RESPONSES_FOR_AVERAGE = 10;
@@ -70,12 +71,12 @@ export function StorageSummary({ summary }: { summary: AdminStorageSummary }) {
         <Warning tone="red">
           Your storage is full. Your forms that store responses on our server aren&apos;t accepting
           responses right now. Delete or export old responses, use Google Drive storage for new
-          forms, or contact us for more space.
+          forms, or contact <RequestStorageButton /> for more space.
         </Warning>
       ) : ratio >= STORAGE_CRITICAL_RATIO ? (
         <Warning tone="red">
-          Your storage is almost full. Delete or export old responses, or contact us for more space,
-          before your forms stop accepting responses.
+          Your storage is almost full. Delete or export old responses, or contact <RequestStorageButton />{" "}
+          for more space, before your forms stop accepting responses.
         </Warning>
       ) : ratio >= STORAGE_WARN_RATIO ? (
         <Warning tone="amber">
@@ -125,6 +126,12 @@ export function StorageSummary({ summary }: { summary: AdminStorageSummary }) {
             </div>
           )}
         </div>
+      )}
+
+      {quotaBytes !== null && (
+        <p className="text-xs text-royal-500">
+          Need more storage? Please contact us via <RequestStorageButton />.
+        </p>
       )}
 
       {freeBytes !== null && (
