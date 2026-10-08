@@ -13,12 +13,12 @@ import {
   estimateStoredFormBytes,
   inlineForeignAssets,
   refreshFormStorageBytes,
-  removeFormFiles,
   removeUnusedFormAssets,
 } from "@/lib/storage-usage";
 import { slugify } from "@/lib/slug";
 import { generateUniqueTitle } from "@/lib/form-naming";
-import { effectiveDraftLimit, effectivePublishedLimit } from "@/lib/form-limits";
+import { BIN_LIMIT, effectiveDraftLimit, effectivePublishedLimit } from "@/lib/form-limits";
+import { deleteFormForGood } from "@/lib/form-bin";
 import { localToUtcInstant, getTimezoneOffset, utcInstantToLocal } from "@/lib/timezones";
 import { hashPassword } from "@/lib/access-code";
 import type { FormField } from "@/types/form-builder";
@@ -325,7 +325,7 @@ export async function setMaintenanceMode(
   if (
     !existing ||
     existing.adminId !== session.user.id ||
-    existing.status === "draft"
+    (existing.status !== "published" && existing.status !== "maintenance")
   ) {
     return { ok: false };
   }
@@ -435,7 +435,8 @@ export async function loadForm(formId: string): Promise<LoadFormResult> {
     }),
     prisma.admin.findUnique({ where: { id: session.user.id } }),
   ]);
-  if (!form || form.adminId !== session.user.id) {
+  // A form in the Bin has to be restored before it can be edited.
+  if (!form || form.adminId !== session.user.id || form.status === "binned") {
     return { ok: false, error: "not-found" };
   }
 
@@ -576,17 +577,83 @@ export async function setFormCompressPhotos(
   return { ok: true };
 }
 
-export async function deleteForm(formId: string): Promise<{ ok: boolean }> {
+export type DeleteFormResult =
+  | { ok: true }
+  | { ok: false; error: "not-signed-in" | "not-found" | "bin-full" };
+
+// "Delete" on Manage forms: moves the form to the admin's Bin rather than
+// deleting it outright. It goes offline at once, can be restored for
+// BIN_RETENTION_DAYS, and is deleted for good after that (see
+// purgeExpiredBinnedForms) — its responses and files still count toward
+// storage until then. The Bin holds at most BIN_LIMIT forms.
+export async function deleteForm(formId: string): Promise<DeleteFormResult> {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false, error: "not-signed-in" };
+
+  const form = await prisma.form.findUnique({ where: { id: formId } });
+  if (!form || form.adminId !== session.user.id || form.status === "binned") {
+    return { ok: false, error: "not-found" };
+  }
+
+  const binCount = await prisma.form.count({
+    where: { adminId: session.user.id, status: "binned" },
+  });
+  if (binCount >= BIN_LIMIT) return { ok: false, error: "bin-full" };
+
+  await prisma.form.update({
+    where: { id: formId },
+    data: { status: "binned", binnedAt: new Date(), binnedFromStatus: form.status },
+  });
+  return { ok: true };
+}
+
+export type RestoreFormResult =
+  | { ok: true; status: string }
+  | { ok: false; error: "not-signed-in" | "not-found" | "draft-limit" };
+
+// Takes a form back out of the Bin. A draft comes back as a draft (if
+// there's room under the draft limit); anything that had been published
+// comes back as archived — never straight back online, so restoring can't
+// silently break the published-forms limit. Unarchive it to go live again.
+export async function restoreFormFromBin(formId: string): Promise<RestoreFormResult> {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false, error: "not-signed-in" };
+
+  const form = await prisma.form.findUnique({ where: { id: formId } });
+  if (!form || form.adminId !== session.user.id || form.status !== "binned") {
+    return { ok: false, error: "not-found" };
+  }
+
+  const status = form.binnedFromStatus === "draft" ? "draft" : "archived";
+  if (status === "draft") {
+    const admin = await prisma.admin.findUnique({ where: { id: session.user.id } });
+    const draftCount = await prisma.form.count({
+      where: { adminId: session.user.id, status: "draft" },
+    });
+    if (!admin || draftCount >= effectiveDraftLimit(admin)) {
+      return { ok: false, error: "draft-limit" };
+    }
+  }
+
+  await prisma.form.update({
+    where: { id: formId },
+    data: { status, binnedAt: null, binnedFromStatus: null },
+  });
+  return { ok: true, status };
+}
+
+// "Delete permanently" in the Bin — the form, its responses and its files,
+// right away instead of after BIN_RETENTION_DAYS.
+export async function deleteFormPermanently(formId: string): Promise<{ ok: boolean }> {
   const session = await auth();
   if (!session?.user?.id) return { ok: false };
 
   const form = await prisma.form.findUnique({ where: { id: formId } });
-  if (!form || form.adminId !== session.user.id) return { ok: false };
+  if (!form || form.adminId !== session.user.id || form.status !== "binned") {
+    return { ok: false };
+  }
 
-  // Files first, while the form's images can still be read — any copy of
-  // this form that still points at them gets them inlined before they go.
-  await removeFormFiles(formId);
-  await prisma.form.delete({ where: { id: formId } });
+  await deleteFormForGood(formId);
   return { ok: true };
 }
 

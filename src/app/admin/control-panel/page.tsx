@@ -12,6 +12,7 @@ import { StorageOverview, type TopStorageUser } from "@/components/super-admin/S
 import { StorageSettingsForm } from "@/components/super-admin/StorageSettingsForm";
 import { AdminStorageControl } from "@/components/super-admin/AdminStorageControl";
 import { getServerStorageOverview } from "@/lib/storage-quota";
+import { purgeExpiredBinnedForms } from "@/lib/form-bin";
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(date);
@@ -27,6 +28,9 @@ export default async function ControlPanelPage() {
   if (!isSuperAdminEmail(session.user.email)) {
     notFound();
   }
+
+  // Expired Bin entries shouldn't show up in the storage numbers below.
+  await purgeExpiredBinnedForms();
 
   const [admins, newMessageCount, storage] = await Promise.all([
     prisma.admin.findMany({

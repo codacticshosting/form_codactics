@@ -11,7 +11,11 @@ import { UnarchiveFormButton } from "@/components/forms/UnarchiveFormButton";
 import { DuplicateFormButton } from "@/components/forms/DuplicateFormButton";
 import { StorageSummary } from "@/components/storage/StorageSummary";
 import { getAdminStorageSummary } from "@/lib/storage-quota";
+import { binPurgeDate, purgeExpiredBinnedForms } from "@/lib/form-bin";
+import { BinFormActions } from "@/components/forms/BinFormActions";
 import {
+  BIN_LIMIT,
+  BIN_RETENTION_DAYS,
   MAX_DRAFTS_PER_ADMIN,
   MAX_PUBLISHED_PER_ADMIN,
   effectiveDraftLimit,
@@ -31,7 +35,11 @@ export default async function ManageFormsPage() {
     redirect("/login?callbackUrl=/admin/forms");
   }
 
-  const [admin, drafts, published, archived, storage] = await Promise.all([
+  // Forms whose time in the Bin is up are deleted for good before
+  // anything is listed or measured.
+  await purgeExpiredBinnedForms(session.user.id);
+
+  const [admin, drafts, published, archived, binned, storage] = await Promise.all([
     prisma.admin.findUnique({ where: { id: session.user.id } }),
     prisma.form.findMany({
       where: { adminId: session.user.id, status: "draft" },
@@ -47,6 +55,10 @@ export default async function ManageFormsPage() {
     prisma.form.findMany({
       where: { adminId: session.user.id, status: "archived" },
       orderBy: { updatedAt: "desc" },
+    }),
+    prisma.form.findMany({
+      where: { adminId: session.user.id, status: "binned" },
+      orderBy: { binnedAt: "desc" },
     }),
     getAdminStorageSummary(session.user.id),
   ]);
@@ -223,6 +235,47 @@ export default async function ManageFormsPage() {
                   <UnarchiveFormButton formId={form.id} />
                   <DuplicateFormButton formId={form.id} />
                   <DeleteFormButton formId={form.id} formTitle={form.title} />
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-sm font-semibold text-royal-950">
+              Bin ({binned.length}/{BIN_LIMIT})
+            </h2>
+            <p className="text-xs text-royal-400">
+              Deleted forms stay here for {BIN_RETENTION_DAYS} days and can be restored. After that
+              they&apos;re deleted for good, with all their responses and files, and their storage
+              is freed. The Bin keeps up to {BIN_LIMIT} forms.
+            </p>
+          </div>
+          {binned.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-royal-200 bg-white p-6 text-center text-sm text-royal-400">
+              The Bin is empty.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {binned.map((form) => (
+                <div
+                  key={form.id}
+                  className="flex flex-wrap items-center gap-3 rounded-xl border border-royal-100 bg-white p-4"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-royal-950">{form.title}</p>
+                    <p className="text-xs text-royal-400">
+                      Deleted {form.binnedAt ? formatDate(form.binnedAt) : ""}
+                      {form.binnedAt && (
+                        <>
+                          {" "}
+                          · deleted for good on {formatDate(binPurgeDate(form.binnedAt))}
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  <BinFormActions formId={form.id} formTitle={form.title} />
                 </div>
               ))}
             </div>

@@ -52,7 +52,7 @@ model Form {
   admin               Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
   slug                String   @unique
   title               String
-  status              String   @default("draft") // "draft" | "published"
+  status              String   @default("draft") // "draft" | "published" | "maintenance" | "archived" | "binned"
   schema              String // JSON-encoded FormField[]
   theme               String // JSON-encoded FormTheme
   storageProvider     String   @default("google") // "google" | "local"
@@ -72,6 +72,12 @@ model Form {
   // 1600 px, JPEG) — set at publish, in the builder's Design step, or on
   // the form's Settings page.
   compressPhotos      Boolean  @default(true)
+  // Set while the form is in its admin's Bin (status "binned"): when it
+  // was deleted, and the status to restore it to. Binned forms are
+  // deleted for good BIN_RETENTION_DAYS after binnedAt (see
+  // src/lib/form-bin.ts) and count toward storage until then.
+  binnedAt            DateTime?
+  binnedFromStatus    String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   publishedAt         DateTime?

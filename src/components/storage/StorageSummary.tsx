@@ -36,9 +36,11 @@ export function StorageSummary({ summary }: { summary: AdminStorageSummary }) {
   const { usedBytes, quotaBytes, freeBytes, isFull } = summary;
   const ratio = quotaBytes ? usedBytes / quotaBytes : 0;
 
-  const localForms = summary.forms.filter((f) => f.status !== "draft" && f.storageProvider === "local");
+  const isLive = (f: FormStorageRow) => f.status !== "draft" && f.status !== "binned";
+  const localForms = summary.forms.filter((f) => isLive(f) && f.storageProvider === "local");
   const drafts = summary.forms.filter((f) => f.status === "draft");
-  const googleForms = summary.forms.filter((f) => f.status !== "draft" && f.storageProvider !== "local");
+  const googleForms = summary.forms.filter((f) => isLive(f) && f.storageProvider !== "local");
+  const binnedForms = summary.forms.filter((f) => f.status === "binned");
   const sum = (forms: FormStorageRow[]) => forms.reduce((total, f) => total + formBytes(f), 0);
 
   return (
@@ -114,6 +116,14 @@ export function StorageSummary({ summary }: { summary: AdminStorageSummary }) {
                 Drafts ({drafts.length}) — including images added in the builder
               </span>
               <span className="text-xs text-royal-500">{formatBytes(sum(drafts))}</span>
+            </div>
+          )}
+          {binnedForms.length > 0 && (
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+              <span className="text-royal-800">
+                Bin ({binnedForms.length}) — freed when deleted for good
+              </span>
+              <span className="text-xs text-royal-500">{formatBytes(sum(binnedForms))}</span>
             </div>
           )}
           {googleForms.length > 0 && (

@@ -7,7 +7,7 @@ import { resetDb } from "../helpers/db";
 import { createTestAdmin, createTestForm } from "../helpers/fixtures";
 import { submitFormAction } from "@/app/[slug]/actions";
 import { initialSubmitState } from "@/types/submission";
-import { deleteForm, duplicateForm } from "@/lib/form-actions";
+import { deleteForm, deleteFormPermanently, duplicateForm } from "@/lib/form-actions";
 import { deleteAllResponses, deleteResponse } from "@/lib/response-actions";
 import {
   recalculateAllStorage,
@@ -169,7 +169,7 @@ describe("deleting responses", () => {
 });
 
 describe("form files", () => {
-  it("deleting a form removes its uploads and form images", async () => {
+  it("permanently deleting a form from the Bin removes its uploads and form images", async () => {
     const admin = await createTestAdmin();
     const form = await createPhotoForm(admin.id);
     await submitFormAction(
@@ -181,6 +181,10 @@ describe("form files", () => {
 
     await signIn(admin.id);
     expect(await deleteForm(form.id)).toEqual({ ok: true });
+    // Only moved to the Bin so far — everything is still there.
+    expect(existsSync(path.join(UPLOADS_ROOT, form.id))).toBe(true);
+
+    expect(await deleteFormPermanently(form.id)).toEqual({ ok: true });
     expect(existsSync(path.join(UPLOADS_ROOT, form.id))).toBe(false);
     expect(existsSync(path.join(SCHEMA_ASSETS_ROOT, form.id))).toBe(false);
   });
@@ -197,6 +201,7 @@ describe("form files", () => {
 
     await signIn(admin.id);
     await deleteForm(original.id);
+    await deleteFormPermanently(original.id);
 
     const updated = await prisma.form.findUniqueOrThrow({ where: { id: copy.id } });
     expect(updated.theme).not.toContain(original.id);

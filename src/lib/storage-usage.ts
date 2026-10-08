@@ -211,6 +211,10 @@ export async function recalculateAllStorage(): Promise<RecalculateStorageResult>
     bytesFreed: 0,
   };
 
+  // Expired Bin entries first, so they're neither measured nor kept.
+  const { purgeExpiredBinnedForms } = await import("@/lib/form-bin");
+  await purgeExpiredBinnedForms();
+
   const forms = await prisma.form.findMany({ select: { id: true, storageBytes: true } });
   const formIds = new Set(forms.map((f) => f.id));
 

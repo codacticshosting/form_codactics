@@ -11,6 +11,7 @@ import path from "node:path";
 import { prisma } from "@/lib/prisma";
 import { LOCAL_STORAGE_ROOT } from "@/lib/storage-root";
 import { MB } from "@/lib/storage-limits";
+import { purgeExpiredBinnedForms } from "@/lib/form-bin";
 
 export interface StorageSettingsValues {
   defaultQuotaMB: number;
@@ -138,6 +139,8 @@ export async function checkStorageCapacity(
   incomingBytes: number,
   fileBytes: number = incomingBytes,
 ): Promise<CapacityResult> {
+  // Forms whose 30 days in the Bin are up shouldn't hold space any more.
+  await purgeExpiredBinnedForms(adminId);
   const [settings, admin] = await Promise.all([
     getStorageSettings(),
     prisma.admin.findUnique({

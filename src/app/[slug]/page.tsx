@@ -15,7 +15,7 @@ import type { FormTheme } from "@/types/theme";
 
 async function getForm(slug: string) {
   const form = await prisma.form.findUnique({ where: { slug } });
-  if (!form || form.status === "draft" || form.status === "archived") return null;
+  if (!form || (form.status !== "published" && form.status !== "maintenance")) return null;
   const isClosed = isFormClosed(form);
   return {
     id: form.id,
