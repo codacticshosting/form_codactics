@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  startTransition,
   useActionState,
   useContext,
   useEffect,
@@ -43,7 +44,11 @@ import { applyOperation, formatComputedResult } from "@/lib/computed";
 import { codeLanguageLabel } from "@/lib/field-types";
 import { HeaderPreview } from "@/components/design/HeaderPreview";
 import { MarkdownContent, InlineMarkdown } from "@/components/shared/MarkdownContent";
-import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/storage-limits";
+import {
+  MAX_UPLOAD_BYTES,
+  MAX_UPLOAD_LABEL,
+  STORAGE_FILE_WONT_FIT_HINT,
+} from "@/lib/storage-limits";
 import { SignaturePad } from "./SignaturePad";
 import { DrawingPad } from "./DrawingPad";
 import { DesignBoardInput } from "./DesignBoardInput";
@@ -395,6 +400,7 @@ export function FormRenderer({
   fields: allFields,
   theme,
   submitAction,
+  checkUploadFits,
   currentUsername,
 }: {
   title: string;
@@ -404,6 +410,10 @@ export function FormRenderer({
     prevState: SubmitState,
     formData: FormData,
   ) => Promise<SubmitState>;
+  // Asks the server whether a just-picked file still fits in the form
+  // owner's storage — absent in the builder preview, where nothing is
+  // ever submitted.
+  checkUploadFits?: (bytes: number) => Promise<boolean>;
   // The access-code username the respondent logged in as, if the form is
   // gated — used to filter sections restricted to specific users. Absent
   // entirely on a form that doesn't require access codes.
@@ -727,7 +737,20 @@ export function FormRenderer({
           This form doesn't have any fields yet.
         </p>
       ) : (
-        <form ref={formRef} className="flex flex-col gap-4" action={formAction}>
+        <form
+          ref={formRef}
+          className="flex flex-col gap-4"
+          // Dispatched by hand rather than via the `action` prop: React
+          // resets a form's fields after an `action` completes even when
+          // it returned an error, wiping everything the respondent typed
+          // just because e.g. the owner's storage was full. On success
+          // the whole form is replaced by the confirmation anyway.
+          onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            startTransition(() => formAction(formData));
+          }}
+        >
           {/* Honeypot — invisible to a real visitor (off-screen, never
               focusable), but a naive bot that fills every field it finds
               will fill this one too. Non-empty on submit = silently
@@ -761,6 +784,7 @@ export function FormRenderer({
             </div>
           )}
 
+          <UploadFitContext.Provider value={checkUploadFits ?? null}>
           <PopupTriggerContext.Provider value={triggerPopup}>
             {sections.map((section, i) => (
               <div
@@ -795,6 +819,7 @@ export function FormRenderer({
               </div>
             ))}
           </PopupTriggerContext.Provider>
+          </UploadFitContext.Provider>
 
           {activePopup && (
             <PopupModal popup={activePopup} onDismiss={() => setActivePopup(null)} />
@@ -941,6 +966,30 @@ export function FormRenderer({
 // trigger a field's popup on first focus without threading a callback prop
 // through every single one of those call sites individually.
 const PopupTriggerContext = createContext<(field: FormField) => void>(() => {});
+
+// The same idea for the file inputs: checkUploadFits from FormRenderer's
+// props, reachable from the photo/document inputs however deeply they're
+// nested (repeating lists, button groups) without prop threading.
+const UploadFitContext = createContext<((bytes: number) => Promise<boolean>) | null>(null);
+
+// After a file passes the local checks, asks whether it fits the owner's
+// remaining storage; if not, clears the input and reports the hint. A
+// failed lookup is ignored — the server checks again on submit anyway.
+function useUploadFitCheck() {
+  const checkFits = useContext(UploadFitContext);
+  return (input: HTMLInputElement, file: File, onWontFit: (message: string) => void) => {
+    if (!checkFits) return;
+    checkFits(file.size)
+      .then((fits) => {
+        // Ignore the answer if the respondent has picked another file since.
+        if (!fits && input.files?.[0] === file) {
+          input.value = "";
+          onWontFit(STORAGE_FILE_WONT_FIT_HINT);
+        }
+      })
+      .catch(() => {});
+  };
+}
 
 function FieldCard({
   field,
@@ -1675,6 +1724,7 @@ function PhotoUploadInput({
   name?: string;
 }) {
   const [fileName, setFileName] = useState<string | null>(null);
+  const checkUploadFit = useUploadFitCheck();
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -1699,6 +1749,10 @@ function PhotoUploadInput({
     }
     setError(null);
     setFileName(file.name);
+    checkUploadFit(e.target, file, (message) => {
+      setFileName(null);
+      setError(message);
+    });
   }
 
   // The browser does clear the file input itself on reset, but our
@@ -1751,6 +1805,7 @@ function DocumentUploadInput({
   name?: string;
 }) {
   const [fileName, setFileName] = useState<string | null>(null);
+  const checkUploadFit = useUploadFitCheck();
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -1764,6 +1819,12 @@ function DocumentUploadInput({
     }
     setError(null);
     setFileName(file?.name ?? null);
+    if (file) {
+      checkUploadFit(e.target, file, (message) => {
+        setFileName(null);
+        setError(message);
+      });
+    }
   }
 
   useEffect(() => {
@@ -2075,6 +2136,7 @@ function CompactPhotoUpload({
   required: boolean;
 }) {
   const [fileName, setFileName] = useState<string | null>(null);
+  const checkUploadFit = useUploadFitCheck();
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -2099,6 +2161,10 @@ function CompactPhotoUpload({
     }
     setError(null);
     setFileName(file.name);
+    checkUploadFit(e.target, file, () => {
+      setFileName(null);
+      setError("Not enough storage");
+    });
   }
 
   useEffect(() => {

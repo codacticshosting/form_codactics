@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Wrench, CalendarOff } from "lucide-react";
+import { Wrench, CalendarOff, HardDrive } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { FormRenderer } from "@/components/form/FormRenderer";
 import { HeaderPreview } from "@/components/design/HeaderPreview";
 import { PageBackground } from "@/components/design/PageBackground";
-import { submitFormAction } from "./actions";
+import { checkUploadFits, submitFormAction } from "./actions";
 import { AccessGate } from "./AccessGate";
 import { CLOSED_MESSAGE, isFormClosed } from "@/types/closing";
+import { isAdminStorageFull } from "@/lib/storage-quota";
+import { STORAGE_FULL_PAGE_MESSAGE, STORAGE_FULL_PAGE_TITLE } from "@/lib/storage-limits";
 import type { FormField } from "@/types/form-builder";
 import type { FormTheme } from "@/types/theme";
 
@@ -17,6 +19,8 @@ async function getForm(slug: string) {
   const isClosed = isFormClosed(form);
   return {
     id: form.id,
+    adminId: form.adminId,
+    storageProvider: form.storageProvider,
     title: form.title,
     status: form.status as "published" | "maintenance",
     isClosed,
@@ -90,6 +94,28 @@ export default async function PublicFormPage({
     );
   }
 
+  // Shown before anyone starts filling the form in — when the owner's
+  // storage is full, nothing would be accepted anyway. Google Drive forms
+  // store responses in the owner's own Drive, so this never applies.
+  if (form.storageProvider === "local" && (await isAdminStorageFull(form.adminId))) {
+    return (
+      <PageBackground
+        background={form.theme.pageBackground}
+        className="flex-1 px-6 py-10"
+        parallax
+      >
+        <div className="mx-auto flex max-w-2xl flex-col gap-4">
+          <HeaderPreview theme={form.theme} title={form.title} />
+          <div className="flex flex-col items-center gap-3 rounded-2xl border border-royal-100 bg-white p-10 text-center shadow-sm">
+            <HardDrive size={28} className="text-royal-400" />
+            <h2 className="text-lg font-semibold text-royal-950">{STORAGE_FULL_PAGE_TITLE}</h2>
+            <p className="max-w-sm text-sm text-royal-500">{STORAGE_FULL_PAGE_MESSAGE}</p>
+          </div>
+        </div>
+      </PageBackground>
+    );
+  }
+
   if (form.requireAccessCode) {
     return (
       <PageBackground
@@ -103,6 +129,7 @@ export default async function PublicFormPage({
           theme={form.theme}
           fields={form.fields}
           submitAction={submitFormAction.bind(null, slug)}
+          checkUploadFits={checkUploadFits.bind(null, slug)}
         />
       </PageBackground>
     );
@@ -116,6 +143,7 @@ export default async function PublicFormPage({
           fields={form.fields}
           theme={form.theme}
           submitAction={submitFormAction.bind(null, slug)}
+          checkUploadFits={checkUploadFits.bind(null, slug)}
         />
       </div>
     </PageBackground>

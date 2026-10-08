@@ -35,6 +35,13 @@ model Admin {
   // default.
   loginLimitFeatureEnabled Boolean @default(false)
 
+  // Per-admin storage quota override, settable only from the super-admin
+  // control panel (see src/lib/storage-quota.ts). null = use
+  // StorageSettings.defaultQuotaMB; storageUnlimited wins over both, but
+  // the server-wide limit and reserve still apply.
+  storageQuotaMB   Int?
+  storageUnlimited Boolean @default(false)
+
   forms           Form[]
   contactMessages ContactMessage[]
 }
@@ -135,6 +142,22 @@ model ContactMessage {
   deletedAt  DateTime?
 
   @@index([status, createdAt])
+}
+
+// Server-wide storage settings, edited by super-admins in the control
+// panel — always a single row (id = 1), created with these defaults the
+// first time it's read.
+model StorageSettings {
+  id             Int      @id @default(1)
+  // What every admin without their own quota gets.
+  defaultQuotaMB Int      @default(200)
+  // Cap on everything all admins store combined. null = no cap of its
+  // own — the whole disk, minus reserveMB, is usable.
+  totalLimitMB   Int?
+  // Disk space always left free (for the database, logins, etc.) — file
+  // uploads stop for everyone once free space would drop below this.
+  reserveMB      Int      @default(300)
+  updatedAt      DateTime @updatedAt
 }
 
 // Only populated for forms published with storageProvider = "local".

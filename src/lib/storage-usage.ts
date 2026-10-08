@@ -281,3 +281,18 @@ export async function recalculateAllStorage(): Promise<RecalculateStorageResult>
 
   return result;
 }
+
+// What a form will take up once saved: its definition text, except that
+// every base64-embedded image becomes a file at its decoded size (about
+// 3/4 of the base64 text it replaces).
+const EMBEDDED_IMAGE_PATTERN = /data:image\/[a-z0-9.+-]+;base64,([A-Za-z0-9+/=]+)/gi;
+
+export function estimateStoredFormBytes(schema: string, theme: string): number {
+  let total = definitionBytes(schema, theme);
+  for (const json of [schema, theme]) {
+    for (const [, base64] of json.matchAll(EMBEDDED_IMAGE_PATTERN)) {
+      total -= base64.length - Math.floor((base64.length * 3) / 4);
+    }
+  }
+  return total;
+}

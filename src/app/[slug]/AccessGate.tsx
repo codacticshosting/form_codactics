@@ -16,6 +16,7 @@ export function AccessGate({
   theme,
   fields,
   submitAction,
+  checkUploadFits,
 }: {
   slug: string;
   title: string;
@@ -25,6 +26,7 @@ export function AccessGate({
     prevState: SubmitState,
     formData: FormData,
   ) => Promise<SubmitState>;
+  checkUploadFits?: (bytes: number) => Promise<boolean>;
 }) {
   const [state, formAction, isPending] = useActionState(
     submitAccessCode.bind(null, slug),
@@ -43,6 +45,7 @@ export function AccessGate({
           fields={fields}
           theme={theme}
           submitAction={submitAction}
+          checkUploadFits={checkUploadFits}
           currentUsername={state.username}
         />
       </div>

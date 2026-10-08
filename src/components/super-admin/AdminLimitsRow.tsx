@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { setAdminLimits, setLoginLimitFeature } from "@/lib/super-admin-actions";
 import { MAX_DRAFTS_PER_ADMIN, MAX_PUBLISHED_PER_ADMIN } from "@/lib/form-limits";
@@ -15,6 +15,7 @@ export function AdminLimitsRow({
   maxDrafts,
   maxPublished,
   loginLimitFeatureEnabled,
+  children,
 }: {
   adminId: string;
   email: string;
@@ -25,6 +26,8 @@ export function AdminLimitsRow({
   maxDrafts: number | null;
   maxPublished: number | null;
   loginLimitFeatureEnabled: boolean;
+  // Extra full-width controls under the row (the storage quota control).
+  children?: ReactNode;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -111,6 +114,7 @@ export function AdminLimitsRow({
         />
         Access-code login limits
       </label>
+      {children}
     </div>
   );
 }

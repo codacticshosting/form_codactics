@@ -8,7 +8,9 @@ import {
   uploadFormImagesToDrive,
 } from "@/lib/google";
 import { saveFormImagesLocally } from "@/lib/local-storage";
+import { checkStorageCapacity } from "@/lib/storage-quota";
 import {
+  estimateStoredFormBytes,
   inlineForeignAssets,
   refreshFormStorageBytes,
   removeFormFiles,
@@ -88,6 +90,23 @@ async function uniqueSlugFor(title: string, excludeFormId?: string) {
     n += 1;
     slug = `${base}-${n}`;
   }
+}
+
+// Whether saving this form (on a local-storage publish/update) would grow
+// it past what the admin's storage can take. Only real growth counts: the
+// builder re-sends every image on each autosave of a live form, and those
+// replace the form's existing files rather than adding to them — so an
+// edit that adds no new image (fixing a typo) is never blocked.
+async function formGrowthBeyondCapacity(
+  adminId: string,
+  existing: { storageBytes: number } | null,
+  input: { fields: FormField[]; theme: FormTheme },
+): Promise<boolean> {
+  const after = estimateStoredFormBytes(JSON.stringify(input.fields), JSON.stringify(input.theme));
+  const growth = after - (existing?.storageBytes ?? 0);
+  if (growth <= 0) return false;
+  const capacity = await checkStorageCapacity(adminId, growth);
+  return !capacity.ok;
 }
 
 export type CreateDraftResult =
@@ -195,7 +214,7 @@ export async function checkTitleAvailability(
 
 export type UpdateLiveFormResult =
   | { ok: true; title: string }
-  | { ok: false; error: "not-signed-in" | "not-found" };
+  | { ok: false; error: "not-signed-in" | "not-found" | "storage-full" };
 
 // Edits an already-published (or under-maintenance) form. The live public
 // page reflects the change immediately. On the Google Sheet side this only
@@ -216,6 +235,11 @@ export async function updateLiveForm(
     (existing.storageProvider === "google" && !existing.googleSheetId)
   ) {
     return { ok: false, error: "not-found" };
+  }
+
+  if (existing.storageProvider === "local") {
+    const growth = await formGrowthBeyondCapacity(session.user.id, existing, input);
+    if (growth) return { ok: false, error: "storage-full" };
   }
 
   const rawTitle = sanitizeTitle(input.title) || "Untitled";
@@ -599,7 +623,8 @@ export type PublishResult =
         | "no-google-access"
         | "google-error"
         | "empty-title"
-        | "publish-limit";
+        | "publish-limit"
+        | "storage-full";
     };
 
 export async function publishForm(input: {
@@ -649,6 +674,11 @@ export async function publishForm(input: {
     if (publishedCount >= effectivePublishedLimit(admin)) {
       return { ok: false, error: "publish-limit" };
     }
+  }
+
+  if (input.storage === "local") {
+    const growth = await formGrowthBeyondCapacity(admin.id, existing, input);
+    if (growth) return { ok: false, error: "storage-full" };
   }
 
   const finalTitle = await generateUniqueTitle(admin.id, title, input.formId);

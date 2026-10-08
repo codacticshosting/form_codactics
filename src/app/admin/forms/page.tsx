@@ -9,6 +9,8 @@ import { CreateFormButton } from "@/components/forms/CreateFormButton";
 import { ArchiveFormButton } from "@/components/forms/ArchiveFormButton";
 import { UnarchiveFormButton } from "@/components/forms/UnarchiveFormButton";
 import { DuplicateFormButton } from "@/components/forms/DuplicateFormButton";
+import { StorageSummary } from "@/components/storage/StorageSummary";
+import { getAdminStorageSummary } from "@/lib/storage-quota";
 import {
   MAX_DRAFTS_PER_ADMIN,
   MAX_PUBLISHED_PER_ADMIN,
@@ -29,7 +31,7 @@ export default async function ManageFormsPage() {
     redirect("/login?callbackUrl=/admin/forms");
   }
 
-  const [admin, drafts, published, archived] = await Promise.all([
+  const [admin, drafts, published, archived, storage] = await Promise.all([
     prisma.admin.findUnique({ where: { id: session.user.id } }),
     prisma.form.findMany({
       where: { adminId: session.user.id, status: "draft" },
@@ -46,6 +48,7 @@ export default async function ManageFormsPage() {
       where: { adminId: session.user.id, status: "archived" },
       orderBy: { updatedAt: "desc" },
     }),
+    getAdminStorageSummary(session.user.id),
   ]);
   const draftLimit = admin ? effectiveDraftLimit(admin) : MAX_DRAFTS_PER_ADMIN;
   const publishedLimit = admin ? effectivePublishedLimit(admin) : MAX_PUBLISHED_PER_ADMIN;
@@ -76,6 +79,8 @@ export default async function ManageFormsPage() {
             Create a new form
           </span>
         </CreateFormButton>
+
+        <StorageSummary summary={storage} />
 
         <section className="flex flex-col gap-3">
           <h2 className="text-sm font-semibold text-royal-950">
@@ -138,6 +143,11 @@ export default async function ManageFormsPage() {
                       {form.status === "maintenance" && (
                         <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
                           Under maintenance
+                        </span>
+                      )}
+                      {storage.isFull && form.storageProvider === "local" && (
+                        <span className="shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-medium text-red-700">
+                          Storage full — not accepting responses
                         </span>
                       )}
                     </div>

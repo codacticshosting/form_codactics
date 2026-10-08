@@ -39,6 +39,8 @@ import {
   type StorageChoice,
   type AccessCodeSummary,
 } from "@/lib/form-actions";
+import { getMyStorage, type MyStorage } from "@/lib/storage-actions";
+import { formatBytes } from "@/lib/storage-limits";
 
 type ActiveDrag =
   | { kind: "palette"; def: FieldTypeDef }
@@ -49,6 +51,9 @@ const PALETTE_WIDTH_STORAGE_KEY = "codactis:field-palette-width";
 const PALETTE_MIN_WIDTH = 200;
 const PALETTE_MAX_WIDTH = 480;
 const PALETTE_DEFAULT_WIDTH = 240; // matches the old fixed 240px column
+
+const STORAGE_FULL_ADMIN_MESSAGE =
+  "Not enough storage for these images. Remove some images, delete old responses on Manage forms, or contact us for more space — your other changes aren't saved until then.";
 
 export default function NewFormPage() {
   return (
@@ -205,6 +210,9 @@ function NewFormPageInner() {
       if (result.ok) {
         if (result.title !== formTitle) setFormTitle(result.title);
         setSavingState("saved");
+      } else if (result.error === "storage-full") {
+        setPublishState("error");
+        setPublishError(STORAGE_FULL_ADMIN_MESSAGE);
       }
     }, 1200);
     return () => {
@@ -292,6 +300,7 @@ function NewFormPageInner() {
           "empty-title": "Give your form a title before publishing.",
           "publish-limit":
             "You've reached your published-forms limit — delete or archive one from Manage Forms before publishing another.",
+          "storage-full": STORAGE_FULL_ADMIN_MESSAGE,
         }[result.error],
       );
     }
@@ -615,19 +624,46 @@ function NewFormPageInner() {
         <StorageChoiceModal
           onClose={() => setShowStorageChoice(false)}
           onChoose={publishWithStorage}
+          collectsFiles={formCollectsFiles(fields)}
         />
       )}
     </div>
   );
 }
 
+// Field types whose answers are files saved on the server when the form
+// uses local storage — worth a heads-up in the storage choice.
+function formCollectsFiles(fields: FormField[]): boolean {
+  return fields.some(
+    (field) =>
+      ["photo", "document", "signature", "drawing", "design-board"].includes(field.type) ||
+      (field.type === "player-list" && field.columns.some((c) => c.type === "photo")) ||
+      (field.type === "button" && field.fields.some((c) => c.type === "photo")),
+  );
+}
+
 function StorageChoiceModal({
   onClose,
   onChoose,
+  collectsFiles,
 }: {
   onClose: () => void;
   onChoose: (storage: StorageChoice) => void;
+  collectsFiles: boolean;
 }) {
+  const [myStorage, setMyStorage] = useState<MyStorage | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    getMyStorage()
+      .then((result) => {
+        if (!cancelled) setMyStorage(result);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
@@ -686,6 +722,19 @@ function StorageChoiceModal({
                 Keeps responses and files on this server — nothing goes
                 through Google. View them from Manage Forms.
               </span>
+              {myStorage && (
+                <span className="mt-1 block text-xs font-medium text-royal-600">
+                  {myStorage.quotaBytes === null
+                    ? `Uses your storage — ${formatBytes(myStorage.usedBytes)} used (unlimited).`
+                    : `Uses your storage — ${formatBytes(myStorage.freeBytes ?? 0)} free of ${formatBytes(myStorage.quotaBytes)}.`}
+                </span>
+              )}
+              {collectsFiles && (
+                <span className="mt-1 block text-xs text-amber-700">
+                  💡 This form collects files (photos, documents, signatures…), which count toward
+                  your storage. For big events, Google Drive storage is a better fit.
+                </span>
+              )}
             </span>
           </button>
         </div>

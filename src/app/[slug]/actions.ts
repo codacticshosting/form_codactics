@@ -9,7 +9,13 @@ import { CLOSED_MESSAGE, isFormClosed } from "@/types/closing";
 import type { FormField } from "@/types/form-builder";
 import type { SubmitState } from "@/types/submission";
 import { checkRateLimit, formatRetryAfter, getClientIp } from "@/lib/rate-limit";
-import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/storage-limits";
+import {
+  MAX_UPLOAD_BYTES,
+  MAX_UPLOAD_LABEL,
+  STORAGE_FILE_TOO_BIG_MESSAGE,
+  STORAGE_FULL_SUBMIT_MESSAGE,
+} from "@/lib/storage-limits";
+import { checkStorageCapacity } from "@/lib/storage-quota";
 
 // A submission this fast essentially can't be a human who actually read
 // and filled the form.
@@ -24,6 +30,24 @@ const SUBMIT_RATE_WINDOW_MS = 10 * 60 * 1000;
 async function clearAccessCookie(formId: string) {
   const cookieStore = await cookies();
   cookieStore.delete(accessCookieName(formId));
+}
+
+// Roughly what a response will take up once stored: uploaded files at
+// their real size, drawn images (signature/drawing/design board, sent as
+// base64 data URLs) at their decoded size, and everything else as text.
+function incomingSubmissionBytes(formData: FormData): { files: number; total: number } {
+  let files = 0;
+  let text = 0;
+  for (const value of formData.values()) {
+    if (value instanceof File) {
+      files += value.size;
+    } else if (value.startsWith("data:")) {
+      files += Math.floor(((value.length - value.indexOf(",") - 1) * 3) / 4);
+    } else {
+      text += Buffer.byteLength(value, "utf8");
+    }
+  }
+  return { files, total: files + text };
 }
 
 export async function submitFormAction(
@@ -112,6 +136,17 @@ export async function submitFormAction(
   const fields = JSON.parse(form.schema) as FormField[];
 
   if (form.storageProvider === "local") {
+    const incoming = incomingSubmissionBytes(formData);
+    const capacity = await checkStorageCapacity(form.adminId, incoming.total, incoming.files);
+    if (!capacity.ok) {
+      return {
+        status: "error",
+        message:
+          capacity.reason === "admin-full" || incoming.files === 0
+            ? STORAGE_FULL_SUBMIT_MESSAGE
+            : STORAGE_FILE_TOO_BIG_MESSAGE,
+      };
+    }
     try {
       await recordSubmissionToLocal({ formId: form.id, fields, formData, accessUsername });
     } catch (err) {
@@ -154,4 +189,19 @@ export async function submitFormAction(
 
   if (form.requireAccessCode) await clearAccessCookie(form.id);
   return { status: "success" };
+}
+
+// Asked by the form page the moment a respondent picks a file, so they
+// learn straight away that it won't fit rather than after filling in the
+// whole form. Answers only yes/no — never the owner's actual numbers. The
+// real check still happens on submit.
+export async function checkUploadFits(slug: string, bytes: number): Promise<boolean> {
+  if (!Number.isFinite(bytes) || bytes < 0) return true;
+  const form = await prisma.form.findUnique({
+    where: { slug },
+    select: { adminId: true, status: true, storageProvider: true },
+  });
+  if (!form || form.status !== "published" || form.storageProvider !== "local") return true;
+  const result = await checkStorageCapacity(form.adminId, Math.min(bytes, MAX_UPLOAD_BYTES));
+  return result.ok;
 }

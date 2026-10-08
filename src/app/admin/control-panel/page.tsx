@@ -8,6 +8,10 @@ import { MAX_DRAFTS_PER_ADMIN, MAX_PUBLISHED_PER_ADMIN } from "@/lib/form-limits
 import { UserMenu } from "@/components/UserMenu";
 import { AdminLimitsRow } from "@/components/super-admin/AdminLimitsRow";
 import { StorageMaintenanceCard } from "@/components/super-admin/StorageMaintenanceCard";
+import { StorageOverview, type TopStorageUser } from "@/components/super-admin/StorageOverview";
+import { StorageSettingsForm } from "@/components/super-admin/StorageSettingsForm";
+import { AdminStorageControl } from "@/components/super-admin/AdminStorageControl";
+import { getServerStorageOverview } from "@/lib/storage-quota";
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(date);
@@ -24,13 +28,25 @@ export default async function ControlPanelPage() {
     notFound();
   }
 
-  const [admins, newMessageCount] = await Promise.all([
+  const [admins, newMessageCount, storage] = await Promise.all([
     prisma.admin.findMany({
       orderBy: { createdAt: "asc" },
       include: { forms: { select: { status: true } } },
     }),
     prisma.contactMessage.count({ where: { status: "new" } }),
+    getServerStorageOverview(),
   ]);
+  const storageByAdmin = new Map(storage.perAdmin.map((row) => [row.adminId, row]));
+  const topUsers: TopStorageUser[] = admins
+    .map((admin) => ({
+      label: admin.name || admin.email,
+      email: admin.email,
+      usedBytes: storageByAdmin.get(admin.id)?.usedBytes ?? 0,
+      quotaBytes: storageByAdmin.get(admin.id)?.quotaBytes ?? null,
+    }))
+    .filter((user) => user.usedBytes > 0)
+    .sort((a, b) => b.usedBytes - a.usedBytes)
+    .slice(0, 5);
 
   return (
     <div className="flex flex-1 flex-col bg-background">
@@ -64,7 +80,15 @@ export default async function ControlPanelPage() {
       </header>
 
       <main className="mx-auto flex w-full max-w-4xl flex-col gap-4 px-6 py-8">
+        <StorageOverview overview={storage} topUsers={topUsers} />
+        <StorageSettingsForm
+          defaultQuotaMB={storage.settings.defaultQuotaMB}
+          totalLimitMB={storage.settings.totalLimitMB}
+          reserveMB={storage.settings.reserveMB}
+        />
         <StorageMaintenanceCard />
+
+        <h2 className="mt-4 text-base font-semibold text-royal-950">Admins</h2>
 
         <p className="text-sm text-royal-500">
           Every account that has signed in, oldest first. Default limit is{" "}
@@ -98,7 +122,16 @@ export default async function ControlPanelPage() {
                   maxDrafts={admin.maxDrafts}
                   maxPublished={admin.maxPublished}
                   loginLimitFeatureEnabled={admin.loginLimitFeatureEnabled}
-                />
+                >
+                  <AdminStorageControl
+                    adminId={admin.id}
+                    usedBytes={storageByAdmin.get(admin.id)?.usedBytes ?? 0}
+                    quotaBytes={storageByAdmin.get(admin.id)?.quotaBytes ?? null}
+                    storageQuotaMB={admin.storageQuotaMB}
+                    storageUnlimited={admin.storageUnlimited}
+                    defaultQuotaMB={storage.settings.defaultQuotaMB}
+                  />
+                </AdminLimitsRow>
               );
             })}
           </div>
