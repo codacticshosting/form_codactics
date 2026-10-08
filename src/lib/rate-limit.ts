@@ -5,6 +5,14 @@ import { prisma } from "@/lib/prisma";
 // in local dev (no proxy) or anywhere else it's absent, which just means
 // every direct/unproxied visitor shares one rate-limit bucket. Fine for
 // what this is used for (slowing down abuse, not identifying anyone).
+//
+// Taking the FIRST x-forwarded-for entry is only safe because Railway's
+// edge discards any x-forwarded-for / x-real-ip a client sends and writes
+// its own "<client>, <railway edge>" (verified on the live app, Oct 2026)
+// — so the first entry can't be spoofed, and the last one is Railway's
+// proxy, not the visitor. Re-check this if the app moves to another host
+// or proxy: one that appends to a client-supplied header instead would
+// make the first entry attacker-controlled.
 export async function getClientIp(): Promise<string> {
   const headersList = await headers();
   const forwardedFor = headersList.get("x-forwarded-for");
