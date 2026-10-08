@@ -42,6 +42,12 @@ model Admin {
   storageQuotaMB   Int?
   storageUnlimited Boolean @default(false)
 
+  // Set when the admin asks to delete their account (Account page). From
+  // then on the account is isolated — every form offline, nothing new
+  // accepted — and ACCOUNT_DELETION_DAYS later the admin and everything
+  // they own is erased for good (see src/lib/account-deletion.ts).
+  deletionRequestedAt DateTime?
+
   forms           Form[]
   contactMessages ContactMessage[]
 }

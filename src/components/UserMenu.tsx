@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Shield } from "lucide-react";
+import { Shield, UserRound } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import { checkIsSuperAdmin } from "@/lib/super-admin-actions";
 
@@ -53,6 +53,13 @@ export function UserMenu() {
           Control panel
         </Link>
       )}
+      <Link
+        href="/admin/account"
+        className="flex items-center gap-1.5 rounded-full border border-royal-200 px-3 py-1.5 text-xs font-medium text-royal-600 hover:bg-royal-50"
+      >
+        <UserRound size={12} />
+        Account
+      </Link>
       <button
         type="button"
         onClick={() => signOut({ callbackUrl: "/" })}

@@ -13,6 +13,8 @@ import { StorageSummary } from "@/components/storage/StorageSummary";
 import { getAdminStorageSummary } from "@/lib/storage-quota";
 import { binPurgeDate, purgeExpiredBinnedForms } from "@/lib/form-bin";
 import { BinFormActions } from "@/components/forms/BinFormActions";
+import { AccountDeletionNotice } from "@/components/account/AccountDeletionNotice";
+import { accountDeletionDate, purgeDeletedAccounts } from "@/lib/account-deletion";
 import {
   BIN_LIMIT,
   BIN_RETENTION_DAYS,
@@ -35,9 +37,37 @@ export default async function ManageFormsPage() {
     redirect("/login?callbackUrl=/admin/forms");
   }
 
-  // Forms whose time in the Bin is up are deleted for good before
+  // Accounts and Bin entries whose time is up are erased for good before
   // anything is listed or measured.
+  await purgeDeletedAccounts();
   await purgeExpiredBinnedForms(session.user.id);
+
+  const owner = await prisma.admin.findUnique({
+    where: { id: session.user.id },
+    select: { deletionRequestedAt: true },
+  });
+  if (!owner) redirect("/login?callbackUrl=/admin/forms");
+  if (owner.deletionRequestedAt) {
+    // An account scheduled for deletion shows only that — no forms.
+    return (
+      <div className="flex flex-1 flex-col bg-background">
+        <header className="sticky top-0 z-20 border-b border-royal-100 bg-white/80 backdrop-blur">
+          <div className="mx-auto flex max-w-4xl items-center gap-4 px-6 py-3">
+            <span className="text-lg font-semibold text-royal-950">Manage forms</span>
+            <div className="flex-1" />
+            <UserMenu />
+          </div>
+        </header>
+        <main className="mx-auto flex w-full max-w-2xl flex-col px-6 py-12">
+          <AccountDeletionNotice
+            deletionDate={new Intl.DateTimeFormat("en-US", { dateStyle: "long" }).format(
+              accountDeletionDate(owner.deletionRequestedAt),
+            )}
+          />
+        </main>
+      </div>
+    );
+  }
 
   const [admin, drafts, published, archived, binned, storage] = await Promise.all([
     prisma.admin.findUnique({ where: { id: session.user.id } }),

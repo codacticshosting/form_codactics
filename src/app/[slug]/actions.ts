@@ -55,8 +55,11 @@ export async function submitFormAction(
   _prevState: SubmitState,
   formData: FormData,
 ): Promise<SubmitState> {
-  const form = await prisma.form.findUnique({ where: { slug } });
-  if (!form || form.status !== "published") {
+  const form = await prisma.form.findUnique({
+    where: { slug },
+    include: { admin: { select: { deletionRequestedAt: true } } },
+  });
+  if (!form || form.status !== "published" || form.admin.deletionRequestedAt) {
     return {
       status: "error",
       message: "This form isn't accepting responses right now.",

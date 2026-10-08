@@ -19,6 +19,7 @@ import { slugify } from "@/lib/slug";
 import { generateUniqueTitle } from "@/lib/form-naming";
 import { BIN_LIMIT, effectiveDraftLimit, effectivePublishedLimit } from "@/lib/form-limits";
 import { deleteFormForGood } from "@/lib/form-bin";
+import { isAccountDeletionPending } from "@/lib/account-deletion";
 import { localToUtcInstant, getTimezoneOffset, utcInstantToLocal } from "@/lib/timezones";
 import { hashPassword } from "@/lib/access-code";
 import type { FormField } from "@/types/form-builder";
@@ -118,7 +119,8 @@ export async function createDraft(): Promise<CreateDraftResult> {
   if (!session?.user?.id) return { ok: false, error: "not-signed-in" };
 
   const admin = await prisma.admin.findUnique({ where: { id: session.user.id } });
-  if (!admin) return { ok: false, error: "not-signed-in" };
+  // An account scheduled for deletion can't start anything new.
+  if (!admin || admin.deletionRequestedAt) return { ok: false, error: "not-signed-in" };
 
   const draftCount = await prisma.form.count({
     where: { adminId: session.user.id, status: "draft" },
@@ -244,6 +246,7 @@ export async function updateLiveForm(
   if (
     !existing ||
     existing.adminId !== session.user.id ||
+    (await isAccountDeletionPending(session.user.id)) ||
     existing.status === "draft" ||
     (existing.storageProvider === "google" && !existing.googleSheetId)
   ) {
@@ -435,8 +438,14 @@ export async function loadForm(formId: string): Promise<LoadFormResult> {
     }),
     prisma.admin.findUnique({ where: { id: session.user.id } }),
   ]);
-  // A form in the Bin has to be restored before it can be edited.
-  if (!form || form.adminId !== session.user.id || form.status === "binned") {
+  // A form in the Bin has to be restored before it can be edited, and
+  // nothing can be edited while the account is scheduled for deletion.
+  if (
+    !form ||
+    form.adminId !== session.user.id ||
+    form.status === "binned" ||
+    admin?.deletionRequestedAt
+  ) {
     return { ok: false, error: "not-found" };
   }
 
@@ -747,7 +756,7 @@ export async function publishForm(input: {
   const admin = await prisma.admin.findUnique({
     where: { id: session.user.id },
   });
-  if (!admin) {
+  if (!admin || admin.deletionRequestedAt) {
     return { ok: false, error: "not-signed-in" };
   }
   if (input.storage === "google" && !admin.googleRefreshToken) {

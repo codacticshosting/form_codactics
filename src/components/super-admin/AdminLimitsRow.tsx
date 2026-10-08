@@ -15,6 +15,7 @@ export function AdminLimitsRow({
   maxDrafts,
   maxPublished,
   loginLimitFeatureEnabled,
+  deletionDate,
   children,
 }: {
   adminId: string;
@@ -26,6 +27,8 @@ export function AdminLimitsRow({
   maxDrafts: number | null;
   maxPublished: number | null;
   loginLimitFeatureEnabled: boolean;
+  // Set when this admin asked to delete their account — when it goes.
+  deletionDate?: string | null;
   // Extra full-width controls under the row (the storage quota control).
   children?: ReactNode;
 }) {
@@ -66,6 +69,11 @@ export function AdminLimitsRow({
         <p className="truncate text-xs text-royal-400">
           {email} · joined {joined}
         </p>
+        {deletionDate && (
+          <p className="mt-1 w-fit rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-medium text-red-700">
+            Account deletion scheduled — erased on {deletionDate}
+          </p>
+        )}
       </div>
 
       <label className="flex items-center gap-1.5 text-xs font-medium text-royal-600">

@@ -45,7 +45,10 @@ export default async function ResponsesPage({
     redirect(`/login?callbackUrl=/admin/forms/${formId}/responses`);
   }
 
-  const form = await prisma.form.findUnique({ where: { id: formId } });
+  const form = await prisma.form.findUnique({
+    where: { id: formId },
+    include: { admin: { select: { deletionRequestedAt: true } } },
+  });
   if (
     !form ||
     form.adminId !== session.user.id ||
@@ -53,6 +56,8 @@ export default async function ResponsesPage({
   ) {
     notFound();
   }
+  // Nothing to manage while the account is scheduled for deletion.
+  if (form.admin.deletionRequestedAt) redirect("/admin/forms");
 
   const submissions = await prisma.submission.findMany({
     where: { formId },

@@ -2,12 +2,13 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { SITE_NAME } from "@/lib/site-config";
 import { CONTACT_RETENTION_DAYS } from "@/lib/contact-messages";
+import { ACCOUNT_DELETION_DAYS, BIN_RETENTION_DAYS } from "@/lib/form-limits";
 
 export const metadata = {
   title: "Privacy Policy",
 };
 
-const LAST_UPDATED = "October 7, 2026";
+const LAST_UPDATED = "October 8, 2026";
 
 export default function PrivacyPolicyPage() {
   return (
@@ -138,14 +139,26 @@ export default function PrivacyPolicyPage() {
               page.
             </li>
             <li>
-              Deleting a form you created removes its definition and, for
-              locally-stored forms, its responses from our database. Forms
-              stored in your own Google Drive are only removed by deleting
-              them there, since we never hold a separate copy.
+              Deleting a form moves it to your Bin, where it stays for{" "}
+              {BIN_RETENTION_DAYS} days and can be restored. After that — or
+              straight away if you delete it permanently — the form and, for
+              locally-stored forms, all its responses and uploaded files are
+              deleted from our server for good. Forms stored in your own
+              Google Drive are only removed by deleting them there, since we
+              never hold a separate copy.
             </li>
             <li>
-              You can ask us to delete your admin account and any data we
-              hold using the contact option on the site.
+              <strong className="text-royal-900">Deleting your account:</strong>{" "}
+              we believe your data belongs to you. You can delete your
+              account yourself from the Account page. It is isolated at once —
+              all your forms go offline and stop accepting responses — and
+              after {ACCOUNT_DELETION_DAYS} days your account and everything
+              we store for it (forms, drafts, responses, uploaded files,
+              access codes and contact messages) is deleted for good and
+              can&apos;t be accessed or restored by anyone, including us. We
+              also withdraw this app&apos;s access to your Google account.
+              Until then you can cancel by signing in. If you sign in again
+              afterwards, you start with a new, empty account.
             </li>
           </ul>
         </section>

@@ -17,3 +17,7 @@ export function effectivePublishedLimit(admin: { maxPublished: number | null }):
 // BIN_RETENTION_DAYS. See src/lib/form-bin.ts.
 export const BIN_LIMIT = 5;
 export const BIN_RETENTION_DAYS = 30;
+
+// How long an account sits isolated after its admin asks to delete it,
+// before it and everything in it is erased for good.
+export const ACCOUNT_DELETION_DAYS = 30;

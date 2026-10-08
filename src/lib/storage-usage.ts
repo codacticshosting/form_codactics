@@ -211,8 +211,12 @@ export async function recalculateAllStorage(): Promise<RecalculateStorageResult>
     bytesFreed: 0,
   };
 
-  // Expired Bin entries first, so they're neither measured nor kept.
+  // Deleted accounts and expired Bin entries first, so they're neither
+  // measured nor kept. (Imported here rather than at the top: both of
+  // those modules import this one.)
+  const { purgeDeletedAccounts } = await import("@/lib/account-deletion");
   const { purgeExpiredBinnedForms } = await import("@/lib/form-bin");
+  await purgeDeletedAccounts();
   await purgeExpiredBinnedForms();
 
   const forms = await prisma.form.findMany({ select: { id: true, storageBytes: true } });

@@ -13,6 +13,7 @@ import { StorageSettingsForm } from "@/components/super-admin/StorageSettingsFor
 import { AdminStorageControl } from "@/components/super-admin/AdminStorageControl";
 import { getServerStorageOverview } from "@/lib/storage-quota";
 import { purgeExpiredBinnedForms } from "@/lib/form-bin";
+import { accountDeletionDate, purgeDeletedAccounts } from "@/lib/account-deletion";
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(date);
@@ -29,7 +30,8 @@ export default async function ControlPanelPage() {
     notFound();
   }
 
-  // Expired Bin entries shouldn't show up in the storage numbers below.
+  // Expired Bin entries and deleted accounts shouldn't show up below.
+  await purgeDeletedAccounts();
   await purgeExpiredBinnedForms();
 
   const [admins, newMessageCount, storage] = await Promise.all([
@@ -126,6 +128,11 @@ export default async function ControlPanelPage() {
                   maxDrafts={admin.maxDrafts}
                   maxPublished={admin.maxPublished}
                   loginLimitFeatureEnabled={admin.loginLimitFeatureEnabled}
+                  deletionDate={
+                    admin.deletionRequestedAt
+                      ? formatDate(accountDeletionDate(admin.deletionRequestedAt))
+                      : null
+                  }
                 >
                   <AdminStorageControl
                     adminId={admin.id}

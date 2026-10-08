@@ -14,8 +14,13 @@ import type { FormField } from "@/types/form-builder";
 import type { FormTheme } from "@/types/theme";
 
 async function getForm(slug: string) {
-  const form = await prisma.form.findUnique({ where: { slug } });
+  const form = await prisma.form.findUnique({
+    where: { slug },
+    include: { admin: { select: { deletionRequestedAt: true } } },
+  });
   if (!form || (form.status !== "published" && form.status !== "maintenance")) return null;
+  // The owner asked to delete their account — all their forms are offline.
+  if (form.admin.deletionRequestedAt) return null;
   const isClosed = isFormClosed(form);
   return {
     id: form.id,

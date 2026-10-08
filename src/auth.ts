@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
+import { purgeDeletedAccounts } from "@/lib/account-deletion";
 
 // Scopes: identity (openid/email/profile) plus narrow, app-created-file-only
 // access to Drive — never broad access to the admin's whole Drive. drive.file
@@ -38,6 +39,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async signIn({ user, account }) {
       if (!user.email) return false;
 
+      // An account whose deletion period is over is erased now, before
+      // the upsert below — so signing in again starts a brand-new account
+      // instead of finding the old one.
+      await purgeDeletedAccounts({ email: user.email });
+
       await prisma.admin.upsert({
         where: { email: user.email },
         update: {
@@ -63,7 +69,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { email: token.email },
           select: { id: true },
         });
+        // Gone (erased after account deletion): drop the stale id, so the
+        // person is asked to sign in again and gets a fresh account.
         if (admin) token.adminId = admin.id;
+        else delete token.adminId;
       }
       return token;
     },

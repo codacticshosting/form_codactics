@@ -37,6 +37,8 @@ export default async function FormSettingsPage({
   if (!form || form.adminId !== session.user.id) {
     notFound();
   }
+  // Nothing to manage while the account is scheduled for deletion.
+  if (admin?.deletionRequestedAt) redirect("/admin/forms");
   const storageProvider = form.storageProvider === "local" ? "local" : "google";
 
   return (
