@@ -37,7 +37,7 @@ const ROWS: ComparisonRow[] = [
     capability: "Free to start",
     codactis: {
       verdict: "yes",
-      note: "Free with 200 MB of storage — need more? Upgrade to a paid storage plan",
+      note: "Free with 200 MB of storage — for more storage, contact us",
     },
     others: { verdict: "partial", note: "Depends on the provider and plan" },
   },
