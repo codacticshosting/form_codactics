@@ -128,7 +128,7 @@ export function ContactWidget() {
         >
           <div className="flex items-center justify-between bg-royal-600 px-4 py-3">
             <span className="text-sm font-semibold text-white">
-              Codactics Support
+              Codactics Form Support
             </span>
             <button
               type="button"

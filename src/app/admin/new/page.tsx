@@ -54,7 +54,7 @@ const PALETTE_MAX_WIDTH = 480;
 const PALETTE_DEFAULT_WIDTH = 240; // matches the old fixed 240px column
 
 const STORAGE_FULL_ADMIN_MESSAGE =
-  "Not enough storage for these images. Remove some images, delete old responses on Manage forms, or contact Codactics Support (chat button, bottom right) for more space — your other changes aren't saved until then.";
+  "Not enough storage for these images. Remove some images, delete old responses on Manage forms, or contact Codactics Form Support (chat button, bottom right) for more space — your other changes aren't saved until then.";
 
 export default function NewFormPage() {
   return (

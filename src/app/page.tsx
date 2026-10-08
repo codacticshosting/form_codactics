@@ -102,7 +102,7 @@ export default async function Home() {
           >
             <Image
               src="/logo/codactics.png"
-              alt="Codactics logo"
+              alt="Team Codactics logo"
               width={20}
               height={20}
               className="rounded"
@@ -126,7 +126,7 @@ export default async function Home() {
       <div className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-24">
         <Image
           src="/logo/codactics.gif"
-          alt="Codactics logo"
+          alt="Codactics Form logo"
           width={96}
           height={96}
           unoptimized
@@ -167,12 +167,12 @@ export default async function Home() {
         </div>
 
         <p className="max-w-2xl text-center text-sm leading-relaxed text-royal-500">
-          Codactics is a free online form builder built for tournament and
-          event registration. Create a form in minutes, gate it behind an
-          access code if you need to, collect responses with file uploads
-          and e-signatures, and store them wherever you choose — a
-          spreadsheet in your own Google Drive, or kept locally on our
-          server — all without writing any code.
+          Codactics Form is a free online form builder for tournament and
+          event registration, developed by Team Codactics. Create a form in
+          minutes, gate it behind an access code if you need to, collect
+          responses with file uploads and e-signatures, and store them
+          wherever you choose — a spreadsheet in your own Google Drive, or
+          kept locally on our server — all without writing any code.
         </p>
       </div>
 
@@ -184,7 +184,7 @@ export default async function Home() {
             </h2>
             <p className="max-w-xl text-sm text-royal-500">
               From a simple sign-up sheet to a fully branded, multi-step
-              tournament registration — Codactics scales with what you need.
+              tournament registration — Codactics Form scales with what you need.
             </p>
           </div>
 

@@ -20,7 +20,7 @@ const POINTS = [
   {
     icon: FolderOpen,
     title: "Your data, your choice",
-    description: "Use Codactics storage, or write straight to your own Google Drive.",
+    description: "Use Codactics Form storage, or write straight to your own Google Drive.",
   },
   {
     icon: Infinity,
@@ -34,7 +34,7 @@ export function WhyCodactis() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col items-center gap-2 text-center">
         <h2 className="text-2xl font-semibold tracking-tight text-royal-950">
-          Why organizers choose Codactics
+          Why organizers choose Codactics Form
         </h2>
       </div>
 

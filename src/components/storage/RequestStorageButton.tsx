@@ -13,7 +13,7 @@ export function RequestStorageButton() {
       }
       className="font-medium text-royal-600 hover:underline"
     >
-      Codactics Support
+      Codactics Form Support
     </button>
   );
 }

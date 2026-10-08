@@ -38,7 +38,7 @@ export default async function LoginPage({
 
       <Image
         src="/logo/codactics.png"
-        alt="Codactics logo"
+        alt="Codactics Form logo"
         width={72}
         height={72}
         priority
@@ -47,7 +47,7 @@ export default async function LoginPage({
 
       <div className="flex flex-col items-center gap-2 text-center">
         <h1 className="text-2xl font-semibold tracking-tight text-royal-950">
-          Sign in to Codactics
+          Sign in to Codactics Form
         </h1>
         <p className="max-w-sm text-sm text-royal-600">
           Use your Google account to build and manage your forms.
