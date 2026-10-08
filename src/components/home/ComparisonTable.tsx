@@ -34,8 +34,11 @@ const ROWS: ComparisonRow[] = [
     others: { verdict: "partial", note: "Platform-dependent" },
   },
   {
-    capability: "Free with no response cap",
-    codactis: { verdict: "yes", note: "No paid tier, no submission limit" },
+    capability: "Free to start",
+    codactis: {
+      verdict: "yes",
+      note: "Free with 200 MB of storage — need more? Upgrade to a paid storage plan",
+    },
     others: { verdict: "partial", note: "Depends on the provider and plan" },
   },
 ];
