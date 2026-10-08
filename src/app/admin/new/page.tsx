@@ -41,6 +41,7 @@ import {
 } from "@/lib/form-actions";
 import { getMyStorage, type MyStorage } from "@/lib/storage-actions";
 import { formatBytes } from "@/lib/storage-limits";
+import { PhotoOptimizationOption } from "@/components/forms/PhotoOptimizationOption";
 
 type ActiveDrag =
   | { kind: "palette"; def: FieldTypeDef }
@@ -112,6 +113,9 @@ function NewFormPageInner() {
   const [theme, setTheme] = useState<FormTheme>(DEFAULT_THEME);
   const [closing, setClosing] = useState<FormClosing>(DEFAULT_CLOSING);
   const [requireAccessCode, setRequireAccessCode] = useState(false);
+  // Form.compressPhotos — on by default; changed in the Design step or the
+  // publish dialog, autosaved like the rest of the form.
+  const [compressPhotos, setCompressPhotos] = useState(true);
   const [accessUsernames, setAccessUsernames] = useState<string[]>([]);
   const [accessCodes, setAccessCodes] = useState<AccessCodeSummary[]>([]);
   const [loginLimitFeatureEnabled, setLoginLimitFeatureEnabled] = useState(false);
@@ -160,6 +164,7 @@ function NewFormPageInner() {
       setFields(result.fields);
       setTheme(result.theme);
       setClosing(result.closing);
+      setCompressPhotos(result.compressPhotos);
       setRequireAccessCode(result.requireAccessCode);
       setAccessUsernames(result.accessUsernames);
       setAccessCodes(result.accessCodes);
@@ -206,7 +211,13 @@ function NewFormPageInner() {
     setSavingState("saving");
     autosaveTimer.current = setTimeout(async () => {
       const save = formStatus === "draft" ? updateDraft : updateLiveForm;
-      const result = await save(formId, { title: formTitle, fields, theme, closing });
+      const result = await save(formId, {
+        title: formTitle,
+        fields,
+        theme,
+        closing,
+        compressPhotos,
+      });
       if (result.ok) {
         if (result.title !== formTitle) setFormTitle(result.title);
         setSavingState("saved");
@@ -218,7 +229,7 @@ function NewFormPageInner() {
     return () => {
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     };
-  }, [isHydrated, formId, formStatus, formTitle, fields, theme, closing]);
+  }, [isHydrated, formId, formStatus, formTitle, fields, theme, closing, compressPhotos]);
 
   // An anonymously-started form (no formId yet) only ever gets a real row
   // at Publish time — but some settings (access codes) need a form to
@@ -280,6 +291,7 @@ function NewFormPageInner() {
       theme,
       storage,
       closing,
+      compressPhotos,
     });
     if (result.ok) {
       setPublishedSlug(result.slug);
@@ -416,6 +428,8 @@ function NewFormPageInner() {
           onThemeChange={setTheme}
           closing={closing}
           onClosingChange={setClosing}
+          compressPhotos={compressPhotos}
+          onCompressPhotosChange={setCompressPhotos}
           onContinue={() => setFlowStep("build")}
           formId={formId}
           requireAccessCode={requireAccessCode}
@@ -625,6 +639,9 @@ function NewFormPageInner() {
           onClose={() => setShowStorageChoice(false)}
           onChoose={publishWithStorage}
           collectsFiles={formCollectsFiles(fields)}
+          collectsPhotos={formCollectsPhotos(fields)}
+          compressPhotos={compressPhotos}
+          onCompressPhotosChange={setCompressPhotos}
         />
       )}
     </div>
@@ -642,14 +659,30 @@ function formCollectsFiles(fields: FormField[]): boolean {
   );
 }
 
+// Photo inputs specifically — the ones "Optimize uploaded photos" acts on.
+function formCollectsPhotos(fields: FormField[]): boolean {
+  return fields.some(
+    (field) =>
+      field.type === "photo" ||
+      (field.type === "player-list" && field.columns.some((c) => c.type === "photo")) ||
+      (field.type === "button" && field.fields.some((c) => c.type === "photo")),
+  );
+}
+
 function StorageChoiceModal({
   onClose,
   onChoose,
   collectsFiles,
+  collectsPhotos,
+  compressPhotos,
+  onCompressPhotosChange,
 }: {
   onClose: () => void;
   onChoose: (storage: StorageChoice) => void;
   collectsFiles: boolean;
+  collectsPhotos: boolean;
+  compressPhotos: boolean;
+  onCompressPhotosChange: (compressPhotos: boolean) => void;
 }) {
   const [myStorage, setMyStorage] = useState<MyStorage | null>(null);
   useEffect(() => {
@@ -670,7 +703,7 @@ function StorageChoiceModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-2xl border border-royal-100 bg-white p-6 shadow-xl"
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-royal-100 bg-white p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
@@ -688,6 +721,13 @@ function StorageChoiceModal({
         </div>
 
         <div className="flex flex-col gap-3">
+          {collectsPhotos && (
+            <PhotoOptimizationOption
+              checked={compressPhotos}
+              onChange={onCompressPhotosChange}
+              freeBytes={myStorage?.freeBytes}
+            />
+          )}
           <button
             type="button"
             onClick={() => onChoose("google")}

@@ -151,7 +151,13 @@ export type UpdateDraftResult =
 
 export async function updateDraft(
   formId: string,
-  input: { title: string; fields: FormField[]; theme: FormTheme; closing: FormClosing },
+  input: {
+    title: string;
+    fields: FormField[];
+    theme: FormTheme;
+    closing: FormClosing;
+    compressPhotos?: boolean;
+  },
 ): Promise<UpdateDraftResult> {
   const session = await auth();
   if (!session?.user?.id) return { ok: false, error: "not-signed-in" };
@@ -171,6 +177,7 @@ export async function updateDraft(
       schema: JSON.stringify(input.fields),
       theme: JSON.stringify(input.theme),
       ...closingToDbFields(input.closing),
+      ...(input.compressPhotos !== undefined ? { compressPhotos: input.compressPhotos } : {}),
     },
   });
   // A draft keeps its images embedded as base64 in the schema/theme, so
@@ -222,7 +229,13 @@ export type UpdateLiveFormResult =
 // a column, so data already collected under the old field list is untouched.
 export async function updateLiveForm(
   formId: string,
-  input: { title: string; fields: FormField[]; theme: FormTheme; closing: FormClosing },
+  input: {
+    title: string;
+    fields: FormField[];
+    theme: FormTheme;
+    closing: FormClosing;
+    compressPhotos?: boolean;
+  },
 ): Promise<UpdateLiveFormResult> {
   const session = await auth();
   if (!session?.user?.id) return { ok: false, error: "not-signed-in" };
@@ -290,6 +303,7 @@ export async function updateLiveForm(
       schema: JSON.stringify(fields),
       theme: JSON.stringify(theme),
       ...closingToDbFields(input.closing),
+      ...(input.compressPhotos !== undefined ? { compressPhotos: input.compressPhotos } : {}),
     },
   });
   // Only now that the new schema/theme is saved — an image replaced in
@@ -395,6 +409,7 @@ export type LoadFormResult =
       status: string;
       closing: FormClosing;
       requireAccessCode: boolean;
+      compressPhotos: boolean;
       accessUsernames: string[];
       accessCodes: AccessCodeSummary[];
       // Whether THIS admin's account has been granted the per-code login
@@ -432,6 +447,7 @@ export async function loadForm(formId: string): Promise<LoadFormResult> {
     status: form.status,
     closing: dbFieldsToClosing(form),
     requireAccessCode: form.requireAccessCode,
+    compressPhotos: form.compressPhotos,
     accessUsernames: form.accessCodes.map((c) => c.username),
     accessCodes: form.accessCodes,
     loginLimitFeatureEnabled: admin?.loginLimitFeatureEnabled ?? false,
@@ -546,6 +562,20 @@ export async function resetAccessCodeLogins(
   return { ok: true };
 }
 
+// The form's Settings page toggle — the same setting the builder's
+// Design step and publish dialog change.
+export async function setFormCompressPhotos(
+  formId: string,
+  compressPhotos: boolean,
+): Promise<{ ok: boolean }> {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false };
+  const form = await prisma.form.findUnique({ where: { id: formId } });
+  if (!form || form.adminId !== session.user.id) return { ok: false };
+  await prisma.form.update({ where: { id: formId }, data: { compressPhotos } });
+  return { ok: true };
+}
+
 export async function deleteForm(formId: string): Promise<{ ok: boolean }> {
   const session = await auth();
   if (!session?.user?.id) return { ok: false };
@@ -607,6 +637,7 @@ export async function duplicateForm(formId: string): Promise<DuplicateFormResult
       closeMode: source.closeMode,
       closesAt: source.closesAt,
       closeTimezoneLabel: source.closeTimezoneLabel,
+      compressPhotos: source.compressPhotos,
     },
   });
   await refreshFormStorageBytes(form.id);
@@ -634,6 +665,7 @@ export async function publishForm(input: {
   theme: FormTheme;
   storage: StorageChoice;
   closing: FormClosing;
+  compressPhotos?: boolean;
 }): Promise<PublishResult> {
   const session = await auth();
   if (!session?.user?.id) {
@@ -693,6 +725,7 @@ export async function publishForm(input: {
     theme: JSON.stringify(input.theme),
     publishedAt: new Date(),
     ...closingToDbFields(input.closing),
+    ...(input.compressPhotos !== undefined ? { compressPhotos: input.compressPhotos } : {}),
   };
 
   if (input.storage === "google") {

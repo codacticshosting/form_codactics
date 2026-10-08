@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, ExternalLink, Pencil, Plus, Inbox, Users } from "lucide-react";
+import { ArrowLeft, ExternalLink, Pencil, Plus, Inbox, Settings } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { UserMenu } from "@/components/UserMenu";
@@ -181,15 +181,13 @@ export default async function ManageFormsPage() {
                       Responses
                     </Link>
                   )}
-                  {form.requireAccessCode && (
-                    <Link
-                      href={`/admin/forms/${form.id}/access`}
-                      className="flex shrink-0 items-center gap-1.5 rounded-full border border-royal-200 px-3 py-1.5 text-xs font-medium text-royal-600 hover:bg-royal-50"
-                    >
-                      <Users size={12} />
-                      Users
-                    </Link>
-                  )}
+                  <Link
+                    href={`/admin/forms/${form.id}/settings`}
+                    className="flex shrink-0 items-center gap-1.5 rounded-full border border-royal-200 px-3 py-1.5 text-xs font-medium text-royal-600 hover:bg-royal-50"
+                  >
+                    <Settings size={12} />
+                    Settings
+                  </Link>
                   <ArchiveFormButton formId={form.id} />
                   <DuplicateFormButton formId={form.id} />
                   <DeleteFormButton formId={form.id} formTitle={form.title} />

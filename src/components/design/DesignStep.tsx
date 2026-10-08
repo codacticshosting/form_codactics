@@ -27,6 +27,7 @@ import { PageBackground } from "./PageBackground";
 const MIN_TEXT_FONT_SIZE = 10;
 const MAX_TEXT_FONT_SIZE = 96;
 import { AccessCodeSettings } from "./AccessCodeSettings";
+import { PhotoOptimizationOption } from "@/components/forms/PhotoOptimizationOption";
 
 const SIDEBAR_WIDTH_STORAGE_KEY = "codactis:design-sidebar-width";
 const SIDEBAR_MIN_WIDTH = 240;
@@ -40,6 +41,8 @@ export function DesignStep({
   onThemeChange,
   closing,
   onClosingChange,
+  compressPhotos,
+  onCompressPhotosChange,
   onContinue,
   formId,
   requireAccessCode,
@@ -53,6 +56,8 @@ export function DesignStep({
   onThemeChange: (theme: FormTheme) => void;
   closing: FormClosing;
   onClosingChange: (closing: FormClosing) => void;
+  compressPhotos: boolean;
+  onCompressPhotosChange: (compressPhotos: boolean) => void;
   onContinue: () => void;
   formId?: string | null;
   requireAccessCode?: boolean;
@@ -642,6 +647,14 @@ export function DesignStep({
               now. Contact the organizer.&rdquo;
             </p>
           )}
+        </div>
+
+        <div className="border-t border-royal-100 pt-4">
+          <label className="mb-1 block text-xs font-medium text-royal-700">Photo uploads</label>
+          <p className="mb-2 text-xs text-royal-400">
+            Applies to photo fields (including photos in repeating lists and buttons).
+          </p>
+          <PhotoOptimizationOption checked={compressPhotos} onChange={onCompressPhotosChange} />
         </div>
 
         <AccessCodeSettings

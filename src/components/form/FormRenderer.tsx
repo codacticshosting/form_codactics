@@ -49,6 +49,7 @@ import {
   MAX_UPLOAD_LABEL,
   STORAGE_FILE_WONT_FIT_HINT,
 } from "@/lib/storage-limits";
+import { compressPhoto, replaceInputFile } from "@/lib/compress-photo";
 import { SignaturePad } from "./SignaturePad";
 import { DrawingPad } from "./DrawingPad";
 import { DesignBoardInput } from "./DesignBoardInput";
@@ -401,6 +402,7 @@ export function FormRenderer({
   theme,
   submitAction,
   checkUploadFits,
+  compressPhotos = false,
   currentUsername,
 }: {
   title: string;
@@ -414,6 +416,8 @@ export function FormRenderer({
   // owner's storage — absent in the builder preview, where nothing is
   // ever submitted.
   checkUploadFits?: (bytes: number) => Promise<boolean>;
+  // Form.compressPhotos — resize photos in the browser before upload.
+  compressPhotos?: boolean;
   // The access-code username the respondent logged in as, if the form is
   // gated — used to filter sections restricted to specific users. Absent
   // entirely on a form that doesn't require access codes.
@@ -785,6 +789,7 @@ export function FormRenderer({
           )}
 
           <UploadFitContext.Provider value={checkUploadFits ?? null}>
+          <CompressPhotosContext.Provider value={compressPhotos}>
           <PopupTriggerContext.Provider value={triggerPopup}>
             {sections.map((section, i) => (
               <div
@@ -819,6 +824,7 @@ export function FormRenderer({
               </div>
             ))}
           </PopupTriggerContext.Provider>
+          </CompressPhotosContext.Provider>
           </UploadFitContext.Provider>
 
           {activePopup && (
@@ -971,6 +977,23 @@ const PopupTriggerContext = createContext<(field: FormField) => void>(() => {});
 // props, reachable from the photo/document inputs however deeply they're
 // nested (repeating lists, button groups) without prop threading.
 const UploadFitContext = createContext<((bytes: number) => Promise<boolean>) | null>(null);
+
+const CompressPhotosContext = createContext(false);
+
+// When the form optimizes photos, swaps the picked photo for a resized
+// copy (see compressPhoto) right in the file input, so that's what gets
+// size-checked and submitted. Returns the file now in the input, or null
+// if the respondent picked yet another file while this one was resizing.
+function usePreparePhoto() {
+  const compress = useContext(CompressPhotosContext);
+  return async (input: HTMLInputElement, file: File): Promise<File | null> => {
+    if (!compress) return file;
+    const optimized = await compressPhoto(file);
+    if (input.files?.[0] !== file) return null;
+    if (optimized === file || !replaceInputFile(input, optimized)) return file;
+    return optimized;
+  };
+}
 
 // After a file passes the local checks, asks whether it fits the owner's
 // remaining storage; if not, clears the input and reports the hint. A
@@ -1725,31 +1748,40 @@ function PhotoUploadInput({
 }) {
   const [fileName, setFileName] = useState<string | null>(null);
   const checkUploadFit = useUploadFitCheck();
+  const preparePhoto = usePreparePhoto();
+  const [optimizing, setOptimizing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) {
+  async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const input = e.target;
+    const picked = input.files?.[0];
+    if (!picked) {
       setFileName(null);
       setError(null);
       return;
     }
-    if (!PHOTO_MIME_TYPES.includes(file.type)) {
+    if (!PHOTO_MIME_TYPES.includes(picked.type)) {
       setError("Please upload a PNG or JPEG photo.");
       setFileName(null);
-      e.target.value = "";
-      return;
-    }
-    if (file.size > MAX_UPLOAD_BYTES) {
-      setError(FILE_TOO_LARGE);
-      setFileName(null);
-      e.target.value = "";
+      input.value = "";
       return;
     }
     setError(null);
+    setFileName(null);
+    setOptimizing(true);
+    const file = await preparePhoto(input, picked);
+    setOptimizing(false);
+    if (!file) return;
+    // Checked on the optimized photo, so a 15 MB original that resizes
+    // to 400 KB is accepted.
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setError(FILE_TOO_LARGE);
+      input.value = "";
+      return;
+    }
     setFileName(file.name);
-    checkUploadFit(e.target, file, (message) => {
+    checkUploadFit(input, file, (message) => {
       setFileName(null);
       setError(message);
     });
@@ -1786,6 +1818,7 @@ function PhotoUploadInput({
           className="hidden"
         />
       </label>
+      {optimizing && <p className="text-xs font-medium text-royal-500">Optimizing photo…</p>}
       {fileName && (
         <p className="flex items-center gap-1.5 text-xs font-medium text-green-600">
           <Check size={12} />
@@ -2137,31 +2170,36 @@ function CompactPhotoUpload({
 }) {
   const [fileName, setFileName] = useState<string | null>(null);
   const checkUploadFit = useUploadFitCheck();
+  const preparePhoto = usePreparePhoto();
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) {
+  async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const input = e.target;
+    const picked = input.files?.[0];
+    if (!picked) {
       setFileName(null);
       setError(null);
       return;
     }
-    if (!PHOTO_MIME_TYPES.includes(file.type)) {
+    if (!PHOTO_MIME_TYPES.includes(picked.type)) {
       setError("PNG or JPEG only");
       setFileName(null);
-      e.target.value = "";
-      return;
-    }
-    if (file.size > MAX_UPLOAD_BYTES) {
-      setError(`Max ${MAX_UPLOAD_LABEL}`);
-      setFileName(null);
-      e.target.value = "";
+      input.value = "";
       return;
     }
     setError(null);
+    setFileName("Optimizing…");
+    const file = await preparePhoto(input, picked);
+    if (!file) return;
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setError(`Max ${MAX_UPLOAD_LABEL}`);
+      setFileName(null);
+      input.value = "";
+      return;
+    }
     setFileName(file.name);
-    checkUploadFit(e.target, file, () => {
+    checkUploadFit(input, file, () => {
       setFileName(null);
       setError("Not enough storage");
     });

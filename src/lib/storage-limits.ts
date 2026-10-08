@@ -32,14 +32,34 @@ export function formatMB(mb: number): string {
   return mb >= 1024 && mb % 1024 === 0 ? `${mb / 1024} GB` : `${mb} MB`;
 }
 
+export interface ResponseSizeProfile {
+  label: string;
+  minBytes: number;
+  maxBytes: number;
+}
+
+// A phone photo with "Optimize uploaded photos" on (resized to 1600 px)
+// versus as taken — also used for the on/off comparison next to that
+// checkbox.
+export const PHOTO_OPTIMIZED_PROFILE: ResponseSizeProfile = {
+  label: "With phone photos (optimized)",
+  minBytes: 200 * 1024,
+  maxBytes: 400 * 1024,
+};
+export const PHOTO_ORIGINAL_PROFILE: ResponseSizeProfile = {
+  label: "With phone photos (original size)",
+  minBytes: 3 * MB,
+  maxBytes: 5 * MB,
+};
+
 // Rough per-response sizes for the "How far does my free space go?"
 // estimates — deliberately ranges, and always shown as approximate.
-// Photo-compression numbers will join these once that's built.
-export const RESPONSE_SIZE_PROFILES: { label: string; minBytes: number; maxBytes: number }[] = [
+export const RESPONSE_SIZE_PROFILES: ResponseSizeProfile[] = [
   { label: "Text only (registration, survey)", minBytes: 2 * 1024, maxBytes: 5 * 1024 },
   { label: "With a signature or drawing", minBytes: 30 * 1024, maxBytes: 100 * 1024 },
   { label: "With a PDF document", minBytes: 200 * 1024, maxBytes: 2 * MB },
-  { label: "With phone photos (original size)", minBytes: 3 * MB, maxBytes: 5 * MB },
+  PHOTO_OPTIMIZED_PROFILE,
+  PHOTO_ORIGINAL_PROFILE,
 ];
 
 // "~1,500 – 5,000" — how many responses of a given size range fit into

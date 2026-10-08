@@ -21,6 +21,7 @@ async function getForm(slug: string) {
     id: form.id,
     adminId: form.adminId,
     storageProvider: form.storageProvider,
+    compressPhotos: form.compressPhotos,
     title: form.title,
     status: form.status as "published" | "maintenance",
     isClosed,
@@ -130,6 +131,7 @@ export default async function PublicFormPage({
           fields={form.fields}
           submitAction={submitFormAction.bind(null, slug)}
           checkUploadFits={checkUploadFits.bind(null, slug)}
+          compressPhotos={form.compressPhotos}
         />
       </PageBackground>
     );
@@ -144,6 +146,7 @@ export default async function PublicFormPage({
           theme={form.theme}
           submitAction={submitFormAction.bind(null, slug)}
           checkUploadFits={checkUploadFits.bind(null, slug)}
+          compressPhotos={form.compressPhotos}
         />
       </div>
     </PageBackground>

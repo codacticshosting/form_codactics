@@ -68,6 +68,10 @@ model Form {
   // separately on each Submission. Kept current by refreshFormStorageBytes
   // in src/lib/storage-usage.ts.
   storageBytes        Int      @default(0)
+  // Resize respondents' photos in their browser before upload (max
+  // 1600 px, JPEG) — set at publish, in the builder's Design step, or on
+  // the form's Settings page.
+  compressPhotos      Boolean  @default(true)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   publishedAt         DateTime?
