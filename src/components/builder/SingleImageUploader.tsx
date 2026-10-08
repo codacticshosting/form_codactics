@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Image as ImageIcon } from "lucide-react";
+import { FORM_IMAGE_ACCEPT } from "@/lib/image-types";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
@@ -59,7 +60,7 @@ export function SingleImageUploader({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept={FORM_IMAGE_ACCEPT}
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0];

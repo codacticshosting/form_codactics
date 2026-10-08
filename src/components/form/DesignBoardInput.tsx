@@ -9,6 +9,7 @@ import {
 } from "react";
 import { Eraser, Undo2, Redo2, Plus, X, Move, Pencil, Wand2 } from "lucide-react";
 import type { FormField } from "@/types/form-builder";
+import { FORM_IMAGE_ACCEPT } from "@/lib/image-types";
 
 const MAX_IMAGES = 5;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -512,7 +513,7 @@ export function DesignBoardInput({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept={FORM_IMAGE_ACCEPT}
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0];

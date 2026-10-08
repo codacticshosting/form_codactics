@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Plus, X, Image as ImageIcon } from "lucide-react";
 import type { RankingItem } from "@/types/form-builder";
+import { FORM_IMAGE_ACCEPT } from "@/lib/image-types";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
@@ -95,7 +96,7 @@ export function RankingItemEditor({
                 fileInputRefs.current[item.id] = el;
               }}
               type="file"
-              accept="image/*"
+              accept={FORM_IMAGE_ACCEPT}
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];

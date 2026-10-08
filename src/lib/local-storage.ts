@@ -20,6 +20,7 @@ import {
   IMAGE_MIME_TO_EXT,
 } from "@/lib/media-utils";
 import type { FormTheme } from "@/types/theme";
+import { FORM_IMAGE_MIME_TYPES } from "@/lib/image-types";
 
 function isPlayerListField(field: FormField): field is PlayerListField {
   return field.type === "player-list";
@@ -66,7 +67,11 @@ export async function saveFormImagesLocally(
   const uploadOne = async (dataUrl: string): Promise<string> => {
     const parsed = dataUrlToBuffer(dataUrl);
     if (!parsed) return dataUrl;
-    const ext = IMAGE_MIME_TO_EXT[parsed.mimeType] ?? "bin";
+    // Only safe raster formats become files served from this domain. An
+    // SVG (which can carry script) or anything else is dropped rather
+    // than published here — the builder no longer offers them anyway.
+    if (!FORM_IMAGE_MIME_TYPES.includes(parsed.mimeType)) return "";
+    const ext = IMAGE_MIME_TO_EXT[parsed.mimeType];
     const fileName = `${crypto.randomUUID()}.${ext}`;
     await writeFile(path.join(dir, fileName), new Uint8Array(parsed.buffer));
     return `/api/forms/${formId}/schema-assets/${fileName}`;

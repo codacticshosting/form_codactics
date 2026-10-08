@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Upload } from "lucide-react";
+import { FORM_IMAGE_ACCEPT, FORM_IMAGE_MIME_TYPES } from "@/lib/image-types";
 
 export function SignaturePad({ name }: { name?: string }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -97,6 +98,10 @@ export function SignaturePad({ name }: { name?: string }) {
   function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!FORM_IMAGE_MIME_TYPES.includes(file.type)) {
+      e.target.value = "";
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result as string;
@@ -144,7 +149,7 @@ export function SignaturePad({ name }: { name?: string }) {
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept={FORM_IMAGE_ACCEPT}
         onChange={handleUpload}
         className="hidden"
       />

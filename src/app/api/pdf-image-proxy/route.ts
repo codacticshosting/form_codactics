@@ -26,6 +26,10 @@ export async function GET(request: Request) {
       headers: {
         "Content-Type": contentType,
         "Cache-Control": "public, max-age=86400",
+        // Same protection as the schema-assets route: whatever comes back
+        // is only ever an image to embed, never a page to run.
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
       },
     });
   } catch {

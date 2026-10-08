@@ -28,6 +28,7 @@ const MIN_TEXT_FONT_SIZE = 10;
 const MAX_TEXT_FONT_SIZE = 96;
 import { AccessCodeSettings } from "./AccessCodeSettings";
 import { PhotoOptimizationOption } from "@/components/forms/PhotoOptimizationOption";
+import { FORM_IMAGE_ACCEPT } from "@/lib/image-types";
 
 const SIDEBAR_WIDTH_STORAGE_KEY = "codactis:design-sidebar-width";
 const SIDEBAR_MIN_WIDTH = 240;
@@ -256,7 +257,7 @@ export function DesignStep({
           <input
             ref={logoInputRef}
             type="file"
-            accept="image/*"
+            accept={FORM_IMAGE_ACCEPT}
             onChange={handleLogoUpload}
             className="hidden"
           />
@@ -496,7 +497,7 @@ export function DesignStep({
           <input
             ref={bgImageInputRef}
             type="file"
-            accept="image/*"
+            accept={FORM_IMAGE_ACCEPT}
             onChange={handleBgImageUpload}
             className="hidden"
           />
@@ -931,7 +932,7 @@ function ImageElementCard({
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept={FORM_IMAGE_ACCEPT}
         onChange={handleUpload}
         className="hidden"
       />

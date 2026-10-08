@@ -42,6 +42,13 @@ export async function GET(
     headers: {
       "Content-Type": IMAGE_EXT_TO_CONTENT_TYPE[ext] ?? "application/octet-stream",
       "Cache-Control": "public, max-age=31536000, immutable",
+      // These files come from admins, i.e. from anyone with a Google
+      // account. Opened directly in a tab, an SVG among them could run
+      // script as this site — so: never sniff the type, and sandbox the
+      // response with no script, no requests and no plugins at all.
+      // Shown inside an <img> (how forms use them) nothing changes.
+      "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
     },
   });
 }
