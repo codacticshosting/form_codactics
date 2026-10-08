@@ -43,6 +43,7 @@ import { applyOperation, formatComputedResult } from "@/lib/computed";
 import { codeLanguageLabel } from "@/lib/field-types";
 import { HeaderPreview } from "@/components/design/HeaderPreview";
 import { MarkdownContent, InlineMarkdown } from "@/components/shared/MarkdownContent";
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/storage-limits";
 import { SignaturePad } from "./SignaturePad";
 import { DrawingPad } from "./DrawingPad";
 import { DesignBoardInput } from "./DesignBoardInput";
@@ -1664,6 +1665,7 @@ function RankingItemRow({
 }
 
 const PHOTO_MIME_TYPES = ["image/png", "image/jpeg"];
+const FILE_TOO_LARGE = `This file is larger than ${MAX_UPLOAD_LABEL}. Please choose a smaller one.`;
 
 function PhotoUploadInput({
   required,
@@ -1685,6 +1687,12 @@ function PhotoUploadInput({
     }
     if (!PHOTO_MIME_TYPES.includes(file.type)) {
       setError("Please upload a PNG or JPEG photo.");
+      setFileName(null);
+      e.target.value = "";
+      return;
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setError(FILE_TOO_LARGE);
       setFileName(null);
       e.target.value = "";
       return;
@@ -1743,16 +1751,28 @@ function DocumentUploadInput({
   name?: string;
 }) {
   const [fileName, setFileName] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setFileName(e.target.files?.[0]?.name ?? null);
+    const file = e.target.files?.[0];
+    if (file && file.size > MAX_UPLOAD_BYTES) {
+      setError(FILE_TOO_LARGE);
+      setFileName(null);
+      e.target.value = "";
+      return;
+    }
+    setError(null);
+    setFileName(file?.name ?? null);
   }
 
   useEffect(() => {
     const formEl = inputRef.current?.closest("form");
     if (!formEl) return;
-    const handleReset = () => setFileName(null);
+    const handleReset = () => {
+      setFileName(null);
+      setError(null);
+    };
     formEl.addEventListener("reset", handleReset);
     return () => formEl.removeEventListener("reset", handleReset);
   }, []);
@@ -1780,6 +1800,7 @@ function DocumentUploadInput({
           Uploaded: {fileName}
         </p>
       )}
+      {error && <p className="text-xs font-medium text-red-600">{error}</p>}
     </div>
   );
 }
@@ -2066,6 +2087,12 @@ function CompactPhotoUpload({
     }
     if (!PHOTO_MIME_TYPES.includes(file.type)) {
       setError("PNG or JPEG only");
+      setFileName(null);
+      e.target.value = "";
+      return;
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setError(`Max ${MAX_UPLOAD_LABEL}`);
       setFileName(null);
       e.target.value = "";
       return;

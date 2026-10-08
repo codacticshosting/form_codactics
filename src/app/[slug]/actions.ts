@@ -9,6 +9,7 @@ import { CLOSED_MESSAGE, isFormClosed } from "@/types/closing";
 import type { FormField } from "@/types/form-builder";
 import type { SubmitState } from "@/types/submission";
 import { checkRateLimit, formatRetryAfter, getClientIp } from "@/lib/rate-limit";
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/storage-limits";
 
 // A submission this fast essentially can't be a human who actually read
 // and filled the form.
@@ -59,6 +60,19 @@ export async function submitFormAction(
   const renderedAt = Number(formData.get("formRenderedAt") ?? 0);
   if (renderedAt && Date.now() - renderedAt < MIN_FILL_TIME_MS) {
     return { status: "success" };
+  }
+
+  // The browser already refuses oversized files when they're picked; this
+  // is the real check, for anything sent without going through that.
+  // Before the rate limit, so a visitor fixing their file doesn't use up
+  // one of their attempts.
+  for (const value of formData.values()) {
+    if (value instanceof File && value.size > MAX_UPLOAD_BYTES) {
+      return {
+        status: "error",
+        message: `Your response was not submitted: "${value.name}" is larger than ${MAX_UPLOAD_LABEL}. Please choose a smaller file.`,
+      };
+    }
   }
 
   // Unlike the bot signals above, this is a real possibility for genuine

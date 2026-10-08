@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { prisma } from "@/lib/prisma";
 import { LOCAL_STORAGE_ROOT } from "@/lib/storage-root";
@@ -394,13 +394,31 @@ export async function recordSubmissionToLocal({
     ...(accessUsername ? { accessUsername } : {}),
   };
 
+  const dataJson = JSON.stringify(data);
   await prisma.submission.create({
     data: {
       id: submissionId,
       formId,
-      dataJson: JSON.stringify(data),
+      dataJson,
+      sizeBytes:
+        Buffer.byteLength(dataJson, "utf8") + (await savedFilesBytes(formId, submissionId)),
     },
   });
 
   return { submissionId };
+}
+
+// saveFileLocally writes every file of a response straight into one flat
+// folder, so its total is just the sum of that folder's entries — 0 when
+// the response had no files at all (no folder is ever created).
+async function savedFilesBytes(formId: string, submissionId: string): Promise<number> {
+  const dir = path.join(UPLOADS_ROOT, formId, submissionId);
+  let names: string[];
+  try {
+    names = await readdir(dir);
+  } catch {
+    return 0;
+  }
+  const sizes = await Promise.all(names.map(async (name) => (await stat(path.join(dir, name))).size));
+  return sizes.reduce((sum, size) => sum + size, 0);
 }

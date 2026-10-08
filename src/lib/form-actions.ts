@@ -8,6 +8,12 @@ import {
   uploadFormImagesToDrive,
 } from "@/lib/google";
 import { saveFormImagesLocally } from "@/lib/local-storage";
+import {
+  inlineForeignAssets,
+  refreshFormStorageBytes,
+  removeFormFiles,
+  removeUnusedFormAssets,
+} from "@/lib/storage-usage";
 import { slugify } from "@/lib/slug";
 import { generateUniqueTitle } from "@/lib/form-naming";
 import { effectiveDraftLimit, effectivePublishedLimit } from "@/lib/form-limits";
@@ -115,6 +121,7 @@ export async function createDraft(): Promise<CreateDraftResult> {
       theme: JSON.stringify(DEFAULT_THEME),
     },
   });
+  await refreshFormStorageBytes(form.id);
 
   return { ok: true, formId: form.id, title: form.title };
 }
@@ -147,6 +154,9 @@ export async function updateDraft(
       ...closingToDbFields(input.closing),
     },
   });
+  // A draft keeps its images embedded as base64 in the schema/theme, so
+  // its size changes with every image added or removed in the builder.
+  await refreshFormStorageBytes(formId);
 
   return { ok: true, title };
 }
@@ -258,6 +268,10 @@ export async function updateLiveForm(
       ...closingToDbFields(input.closing),
     },
   });
+  // Only now that the new schema/theme is saved — an image replaced in
+  // this edit (e.g. a new logo) leaves its old file unreferenced.
+  if (existing.storageProvider === "local") await removeUnusedFormAssets(formId);
+  await refreshFormStorageBytes(formId);
 
   return { ok: true, title };
 }
@@ -515,6 +529,9 @@ export async function deleteForm(formId: string): Promise<{ ok: boolean }> {
   const form = await prisma.form.findUnique({ where: { id: formId } });
   if (!form || form.adminId !== session.user.id) return { ok: false };
 
+  // Files first, while the form's images can still be read — any copy of
+  // this form that still points at them gets them inlined before they go.
+  await removeFormFiles(formId);
   await prisma.form.delete({ where: { id: formId } });
   return { ok: true };
 }
@@ -559,13 +576,16 @@ export async function duplicateForm(formId: string): Promise<DuplicateFormResult
       slug,
       title,
       status: "draft",
-      schema: source.schema,
-      theme: source.theme,
+      // The copy gets its own embedded images rather than pointing at the
+      // source form's saved files, which are deleted along with it.
+      schema: await inlineForeignAssets(source.schema, null),
+      theme: await inlineForeignAssets(source.theme, null),
       closeMode: source.closeMode,
       closesAt: source.closesAt,
       closeTimezoneLabel: source.closeTimezoneLabel,
     },
   });
+  await refreshFormStorageBytes(form.id);
 
   return { ok: true, formId: form.id };
 }
@@ -694,7 +714,9 @@ export async function publishForm(input: {
       where: { id: formId },
       data: { schema: JSON.stringify(fields), theme: JSON.stringify(theme) },
     });
+    await removeUnusedFormAssets(formId);
   }
+  await refreshFormStorageBytes(formId);
 
   return { ok: true, slug };
 }

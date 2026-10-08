@@ -13,6 +13,7 @@ import {
 } from "@/lib/local-storage";
 import { formatBerlinDate, formatBerlinTime } from "@/lib/timezones";
 import { ResponsesList, type ResponseRow, type ResponseAnswerDisplay } from "@/components/admin/ResponsesList";
+import { DeleteAllResponsesButton } from "@/components/admin/DeleteAllResponsesButton";
 
 // German local time, auto-adjusted for CET/CEST — not the server's own
 // timezone, which may not be Germany's at all depending on where it's hosted.
@@ -134,7 +135,7 @@ export default async function ResponsesPage({
             Stored locally on this server, not through Google.
           </p>
           {rows.length > 0 && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <a
                 href={`/api/forms/${formId}/export?format=csv`}
                 className="flex items-center gap-1.5 rounded-full border border-royal-200 px-3 py-1.5 text-xs font-medium text-royal-600 hover:bg-royal-50"
@@ -149,11 +150,12 @@ export default async function ResponsesPage({
                 <FileJson size={12} />
                 Export JSON
               </a>
+              <DeleteAllResponsesButton formId={formId} responseCount={rows.length} />
             </div>
           )}
         </div>
 
-        <ResponsesList rows={rows} />
+        <ResponsesList formId={formId} rows={rows} />
       </main>
     </div>
   );

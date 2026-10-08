@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isSuperAdminEmail } from "@/lib/super-admin";
+import { recalculateAllStorage, type RecalculateStorageResult } from "@/lib/storage-usage";
 
 // Re-checked here on every call, independent of whatever the client-side
 // "show the link" check already did — the real gate for every action in
@@ -71,4 +72,17 @@ export async function setLoginLimitFeature(
     data: { loginLimitFeatureEnabled: enabled },
   });
   return { ok: true };
+}
+
+export type RecalculateStorageActionResult =
+  | ({ ok: true } & RecalculateStorageResult)
+  | { ok: false; error: "forbidden" };
+
+// The control panel's "Recalculate & clean up" button — see
+// recalculateAllStorage for what it does. Safe to run any time; also the
+// way to fill in sizes for data stored before sizes were tracked.
+export async function recalculateStorage(): Promise<RecalculateStorageActionResult> {
+  const session = await requireSuperAdmin();
+  if (!session) return { ok: false, error: "forbidden" };
+  return { ok: true, ...(await recalculateAllStorage()) };
 }

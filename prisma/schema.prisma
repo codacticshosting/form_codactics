@@ -55,6 +55,12 @@ model Form {
   closesAt            DateTime? // absolute UTC instant; only meaningful when closeMode = "deadline"
   closeTimezoneLabel  String? // e.g. "Eastern Time (EST, UTC-05:00)" — for redisplay only, not used in the comparison
   requireAccessCode   Boolean  @default(false)
+  // Bytes this form itself takes up on the server: its saved definition
+  // (schema + theme text — which, for a draft, still embeds images as
+  // base64) plus its locally-saved form images. Responses are counted
+  // separately on each Submission. Kept current by refreshFormStorageBytes
+  // in src/lib/storage-usage.ts.
+  storageBytes        Int      @default(0)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   publishedAt         DateTime?
@@ -138,4 +144,6 @@ model Submission {
   form        Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
   submittedAt DateTime @default(now())
   dataJson    String // JSON-encoded { answers, playerListEntries }
+  // This response's uploaded files plus its dataJson text, in bytes.
+  sizeBytes   Int      @default(0)
 }

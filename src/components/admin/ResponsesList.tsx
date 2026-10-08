@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Download, Search, X } from "lucide-react";
+import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { Download, Search, Trash2, X } from "lucide-react";
+import { deleteResponse } from "@/lib/response-actions";
 
 export interface ResponseAnswerDisplay {
   label: string;
@@ -39,7 +41,36 @@ function AnswerValue({ value }: { value: ResponseAnswerDisplay["value"] }) {
   return <>{value.text || "—"}</>;
 }
 
-export function ResponsesList({ rows }: { rows: ResponseRow[] }) {
+function DeleteResponseButton({ formId, submissionId }: { formId: string; submissionId: string }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  function handleDelete() {
+    if (!window.confirm("Delete this response and its uploaded files? This can't be undone.")) {
+      return;
+    }
+    startTransition(async () => {
+      const result = await deleteResponse(formId, submissionId);
+      if (!result.ok) window.alert("Couldn't delete this response. Please reload and try again.");
+      router.refresh();
+    });
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleDelete}
+      disabled={isPending}
+      aria-label="Delete this response"
+      className="ml-auto flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-red-500 hover:bg-red-50 disabled:cursor-wait disabled:opacity-60"
+    >
+      <Trash2 size={12} />
+      {isPending ? "Deleting…" : "Delete"}
+    </button>
+  );
+}
+
+export function ResponsesList({ formId, rows }: { formId: string; rows: ResponseRow[] }) {
   const [query, setQuery] = useState("");
   const [username, setUsername] = useState("all");
   const [fromDate, setFromDate] = useState("");
@@ -163,6 +194,7 @@ export function ResponsesList({ rows }: { rows: ResponseRow[] }) {
                     {row.accessUsername}
                   </span>
                 )}
+                <DeleteResponseButton formId={formId} submissionId={row.id} />
               </p>
               <div className="flex flex-col gap-3">
                 {row.answers.map((answer, i) => (

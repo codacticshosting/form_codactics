@@ -7,6 +7,7 @@ import { isSuperAdminEmail } from "@/lib/super-admin";
 import { MAX_DRAFTS_PER_ADMIN, MAX_PUBLISHED_PER_ADMIN } from "@/lib/form-limits";
 import { UserMenu } from "@/components/UserMenu";
 import { AdminLimitsRow } from "@/components/super-admin/AdminLimitsRow";
+import { StorageMaintenanceCard } from "@/components/super-admin/StorageMaintenanceCard";
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(date);
@@ -63,6 +64,8 @@ export default async function ControlPanelPage() {
       </header>
 
       <main className="mx-auto flex w-full max-w-4xl flex-col gap-4 px-6 py-8">
+        <StorageMaintenanceCard />
+
         <p className="text-sm text-royal-500">
           Every account that has signed in, oldest first. Default limit is{" "}
           {MAX_DRAFTS_PER_ADMIN} drafts / {MAX_PUBLISHED_PER_ADMIN} published —
