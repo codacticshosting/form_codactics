@@ -102,7 +102,7 @@ export default async function Home() {
           >
             <Image
               src="/logo/codactics.png"
-              alt="Team Codactics logo"
+              alt="CODACTICS logo"
               width={20}
               height={20}
               className="rounded"
@@ -168,7 +168,7 @@ export default async function Home() {
 
         <p className="max-w-2xl text-center text-sm leading-relaxed text-royal-500">
           Codactics Form is a free online form builder for tournament and
-          event registration, developed by Team Codactics. Create a form in
+          event registration, developed by CODACTICS. Create a form in
           minutes, gate it behind an access code if you need to, collect
           responses with file uploads and e-signatures, and store them
           wherever you choose — a spreadsheet in your own Google Drive, or

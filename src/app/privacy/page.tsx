@@ -33,7 +33,7 @@ export default function PrivacyPolicyPage() {
         <p>
           {SITE_NAME} (&quot;Codactics Form&quot;, &quot;we&quot;, &quot;us&quot;) is a form-building
           tool for tournament and event registration, developed and operated
-          by Team Codactics. This page explains what
+          by CODACTICS. This page explains what
           data we collect, how it&apos;s used, and the choices you have —
           both as a form creator (&quot;admin&quot;) who signs in to build forms, and
           as a respondent who fills one out.
@@ -115,7 +115,7 @@ export default function PrivacyPolicyPage() {
             a spreadsheet and folder for a form you publish, and writing that
             form&apos;s responses into them as they come in. We don&apos;t
             read, share, sell, or use this data for advertising, and no
-            human at Team Codactics views it as part of normal operation.
+            human at CODACTICS views it as part of normal operation.
           </p>
         </section>
 

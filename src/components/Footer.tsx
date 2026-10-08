@@ -11,7 +11,7 @@ export function Footer() {
           rel="noopener noreferrer"
           className="font-semibold text-red-600 hover:underline"
         >
-          Team Codactics
+          CODACTICS
         </a>
       </span>
       <Link href="/privacy" className="text-xs text-royal-400 hover:underline">

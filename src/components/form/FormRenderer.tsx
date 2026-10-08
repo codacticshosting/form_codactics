@@ -50,6 +50,7 @@ import {
   STORAGE_FILE_WONT_FIT_HINT,
 } from "@/lib/storage-limits";
 import { compressPhoto, replaceInputFile } from "@/lib/compress-photo";
+import { SITE_URL } from "@/lib/site-config";
 import { SignaturePad } from "./SignaturePad";
 import { DrawingPad } from "./DrawingPad";
 import { DesignBoardInput } from "./DesignBoardInput";
@@ -686,7 +687,7 @@ export function FormRenderer({
           align: "right",
         });
         pdf.text(
-          "Developed and maintained by CODACTICS  •  http://forms.codactics.com/",
+          `Codactics Form — developed and maintained by CODACTICS  •  ${SITE_URL}`,
           pageWidth / 2,
           pageHeight - 18,
           { align: "center" },
