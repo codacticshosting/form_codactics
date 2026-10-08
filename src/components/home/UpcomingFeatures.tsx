@@ -1,6 +1,6 @@
 "use client";
 
-import { Lock, Gauge, type LucideIcon } from "lucide-react";
+import { Lock, Gauge, HardDrive, type LucideIcon } from "lucide-react";
 import { openContactWidget } from "@/lib/contact-widget";
 
 interface UpcomingFeature {
@@ -30,6 +30,14 @@ const UPCOMING_FEATURES: UpcomingFeature[] = [
       "Need to work on more drafts, or keep more forms published at once, than the default allows? We can raise your limit on request.",
     prefillMessage: "Hi! I'd like a higher draft/publish limit for my account.",
     ctaLabel: "Request",
+  },
+  {
+    icon: HardDrive,
+    title: "More storage on our server",
+    description:
+      "Every account includes 200 MB for responses and files stored on our server. Need more than 200 MB? Contact us and we'll increase it for you.",
+    prefillMessage: "Hi! I'd like more than 200 MB of storage for my account. Here's what I need it for: ",
+    ctaLabel: "Contact us",
   },
 ];
 

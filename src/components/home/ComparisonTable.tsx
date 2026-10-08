@@ -33,14 +33,6 @@ const ROWS: ComparisonRow[] = [
     codactis: { verdict: "yes", note: "Your own Google Drive, or kept on our server" },
     others: { verdict: "partial", note: "Platform-dependent" },
   },
-  {
-    capability: "Free to start",
-    codactis: {
-      verdict: "yes",
-      note: "Free with 200 MB of storage — for more storage, contact us",
-    },
-    others: { verdict: "partial", note: "Depends on the provider and plan" },
-  },
 ];
 
 function VerdictCell({ verdict, note }: { verdict: Verdict; note: string }) {
