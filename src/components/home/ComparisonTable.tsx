@@ -65,8 +65,7 @@ export function ComparisonTable() {
           See the full comparison
         </h2>
         <p className="max-w-xl text-sm text-royal-500">
-          How Codactics stacks up against generic form tools — Google Forms,
-          Typeform, JotForm, and the rest.
+          How Codactics Form compares with online form tools in general.
         </p>
       </div>
 
@@ -78,10 +77,10 @@ export function ComparisonTable() {
                 What you need
               </th>
               <th className="border-l-2 border-royal-600 bg-royal-50/60 px-5 py-3.5 text-sm font-semibold text-royal-700">
-                Codactics
+                Codactics Form
               </th>
               <th className="px-5 py-3.5 text-sm font-medium text-royal-500">
-                Generic form tools
+                In general
               </th>
             </tr>
           </thead>
