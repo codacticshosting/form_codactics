@@ -61,3 +61,32 @@ describe("serving form images", () => {
     expect(csp).toContain("default-src 'none'");
   });
 });
+
+describe("banner image", () => {
+  it("gives themes saved before banners existed an empty banner", async () => {
+    const { normalizeTheme, DEFAULT_BANNER } = await import("@/types/theme");
+    const { banner: _banner, ...legacy } = DEFAULT_THEME;
+    void _banner;
+    expect(normalizeTheme(legacy as typeof DEFAULT_THEME).banner).toEqual(DEFAULT_BANNER);
+  });
+
+  it("is saved as a file on publish, like the logo", async () => {
+    const admin = await createTestAdmin();
+    const form = await createTestForm(admin.id);
+    const theme = { ...DEFAULT_THEME, banner: { ...DEFAULT_THEME.banner, dataUrl: pngDataUrl, zoom: 2 } };
+
+    const saved = await saveFormImagesLocally(form.id, [], theme);
+
+    expect(saved.theme.banner.dataUrl).toMatch(/^\/api\/forms\/.+\/schema-assets\/.+\.png$/);
+    expect(saved.theme.banner.zoom).toBe(2);
+  });
+
+  it("drops an SVG banner instead of publishing it", async () => {
+    const admin = await createTestAdmin();
+    const form = await createTestForm(admin.id);
+    const theme = { ...DEFAULT_THEME, banner: { ...DEFAULT_THEME.banner, dataUrl: svgDataUrl } };
+
+    const saved = await saveFormImagesLocally(form.id, [], theme);
+    expect(saved.theme.banner.dataUrl).toBe("");
+  });
+});

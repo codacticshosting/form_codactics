@@ -20,7 +20,7 @@ import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { ArrowLeft, Palette, Check, Copy, PanelLeftClose, PanelLeftOpen, Cloud, HardDrive, X } from "lucide-react";
 import { createField, getFieldTypeDef, type FieldTypeDef } from "@/lib/field-types";
 import type { FieldType, FormField } from "@/types/form-builder";
-import { DEFAULT_THEME, type FormTheme } from "@/types/theme";
+import { DEFAULT_THEME, normalizeTheme, type FormTheme } from "@/types/theme";
 import { DEFAULT_CLOSING, type FormClosing } from "@/types/closing";
 import { FieldPalette } from "@/components/builder/FieldPalette";
 import { FormCanvas } from "@/components/builder/FormCanvas";
@@ -195,7 +195,8 @@ function NewFormPageInner() {
     if (!draft) return;
     setFormTitle(draft.formTitle);
     setFields(draft.fields);
-    setTheme(draft.theme);
+    // A draft kept in the browser from before banners existed has none.
+    setTheme(normalizeTheme(draft.theme));
     setClosing(draft.closing ?? DEFAULT_CLOSING);
     setFlowStep(draft.flowStep);
     clearDraft();

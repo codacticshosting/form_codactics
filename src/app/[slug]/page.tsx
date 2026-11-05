@@ -11,7 +11,7 @@ import { CLOSED_MESSAGE, isFormClosed } from "@/types/closing";
 import { isAdminStorageFull } from "@/lib/storage-quota";
 import { STORAGE_FULL_PAGE_MESSAGE, STORAGE_FULL_PAGE_TITLE } from "@/lib/storage-limits";
 import type { FormField } from "@/types/form-builder";
-import type { FormTheme } from "@/types/theme";
+import { normalizeTheme, type FormTheme } from "@/types/theme";
 
 async function getForm(slug: string) {
   const form = await prisma.form.findUnique({
@@ -32,7 +32,7 @@ async function getForm(slug: string) {
     isClosed,
     requireAccessCode: form.requireAccessCode,
     fields: JSON.parse(form.schema) as FormField[],
-    theme: JSON.parse(form.theme) as FormTheme,
+    theme: normalizeTheme(JSON.parse(form.theme) as FormTheme),
   };
 }
 

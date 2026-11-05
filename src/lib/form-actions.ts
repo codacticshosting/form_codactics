@@ -23,7 +23,7 @@ import { isAccountDeletionPending } from "@/lib/account-deletion";
 import { localToUtcInstant, getTimezoneOffset, utcInstantToLocal } from "@/lib/timezones";
 import { hashPassword } from "@/lib/access-code";
 import type { FormField } from "@/types/form-builder";
-import { DEFAULT_THEME, type FormTheme } from "@/types/theme";
+import { DEFAULT_THEME, normalizeTheme, type FormTheme } from "@/types/theme";
 import { DEFAULT_CLOSING, type FormClosing } from "@/types/closing";
 
 export type StorageChoice = "google" | "local";
@@ -453,7 +453,7 @@ export async function loadForm(formId: string): Promise<LoadFormResult> {
     ok: true,
     title: form.title,
     fields: JSON.parse(form.schema) as FormField[],
-    theme: JSON.parse(form.theme) as FormTheme,
+    theme: normalizeTheme(JSON.parse(form.theme) as FormTheme),
     status: form.status,
     closing: dbFieldsToClosing(form),
     requireAccessCode: form.requireAccessCode,

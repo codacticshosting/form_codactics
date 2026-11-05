@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { CANVAS_WIDTH, CANVAS_HEIGHT, TITLE_BOX_HEIGHT, textStyleToCss, type FormTheme } from "@/types/theme";
 import { useElementWidth } from "@/hooks/useElementWidth";
 import { InlineMarkdown } from "@/components/shared/MarkdownContent";
+import { BannerImageFrame } from "./BannerImageFrame";
 
 function boxStyle(el: { x: number; y: number; width: number; height: number }) {
   return {
@@ -26,14 +27,17 @@ export function HeaderPreview({
   const scale = wrapperWidth > 0 ? wrapperWidth / CANVAS_WIDTH : 1;
 
   return (
-    <div
-      ref={wrapperRef}
-      className="relative w-full overflow-hidden rounded-2xl border border-royal-100"
-      style={{
-        aspectRatio: `${CANVAS_WIDTH} / ${CANVAS_HEIGHT}`,
-        backgroundColor: theme.headerBackgroundColor,
-      }}
-    >
+    <div className="flex w-full flex-col gap-2">
+      {theme.banner.dataUrl && <BannerImageFrame banner={theme.banner} />}
+
+      <div
+        ref={wrapperRef}
+        className="relative w-full overflow-hidden rounded-2xl border border-royal-100"
+        style={{
+          aspectRatio: `${CANVAS_WIDTH} / ${CANVAS_HEIGHT}`,
+          backgroundColor: theme.headerBackgroundColor,
+        }}
+      >
       <div
         className="absolute top-0 left-0"
         style={{
@@ -89,6 +93,7 @@ export function HeaderPreview({
             <InlineMarkdown content={text.content} />
           </div>
         ))}
+      </div>
       </div>
     </div>
   );

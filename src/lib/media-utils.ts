@@ -92,6 +92,7 @@ export function fieldsHaveEmbeddedImage(fields: FormField[]): boolean {
 export function themeHasEmbeddedImage(theme: FormTheme): boolean {
   return (
     !!theme.logo.dataUrl?.startsWith("data:") ||
+    !!theme.banner?.dataUrl?.startsWith("data:") ||
     !!theme.pageBackground.imageDataUrl?.startsWith("data:") ||
     theme.images.some((img) => img.dataUrl?.startsWith("data:"))
   );
@@ -169,6 +170,11 @@ export async function replaceEmbeddedThemeImages(
     ? { ...theme.logo, dataUrl: await uploadOne(theme.logo.dataUrl, "logo") }
     : theme.logo;
 
+  // Themes saved before banners existed have no `banner` at all.
+  const banner = theme.banner?.dataUrl?.startsWith("data:")
+    ? { ...theme.banner, dataUrl: await uploadOne(theme.banner.dataUrl, "banner") }
+    : theme.banner;
+
   const pageBackground = theme.pageBackground.imageDataUrl?.startsWith("data:")
     ? {
         ...theme.pageBackground,
@@ -185,5 +191,5 @@ export async function replaceEmbeddedThemeImages(
     );
   }
 
-  return { ...theme, logo, pageBackground, images };
+  return { ...theme, logo, banner, pageBackground, images };
 }

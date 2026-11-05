@@ -7,6 +7,7 @@ import {
   CANVAS_WIDTH,
   CANVAS_HEIGHT,
   DEFAULT_THEME,
+  DEFAULT_BANNER,
   textStyleToCss,
   createImageElement,
   createTextElement,
@@ -23,9 +24,11 @@ import type { AccessCodeSummary } from "@/lib/form-actions";
 import { DraggableBox } from "./DraggableBox";
 import { HeaderPreview } from "./HeaderPreview";
 import { PageBackground } from "./PageBackground";
+import { BannerImageFrame } from "./BannerImageFrame";
 
 const MIN_TEXT_FONT_SIZE = 10;
 const MAX_TEXT_FONT_SIZE = 96;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 import { AccessCodeSettings } from "./AccessCodeSettings";
 import { PhotoOptimizationOption } from "@/components/forms/PhotoOptimizationOption";
 import { FORM_IMAGE_ACCEPT } from "@/lib/image-types";
@@ -71,8 +74,12 @@ export function DesignStep({
   const wrapperWidth = useElementWidth(wrapperRef);
   const canvasScale = wrapperWidth > 0 ? wrapperWidth / CANVAS_WIDTH : 1;
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
   const bgImageInputRef = useRef<HTMLInputElement>(null);
   const [titleWarning, setTitleWarning] = useState<string | null>(null);
+  const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
+  const [bannerUploadError, setBannerUploadError] = useState<string | null>(null);
+  const [bgImageUploadError, setBgImageUploadError] = useState<string | null>(null);
 
   // How wide the settings sidebar is — draggable via the handle on its
   // right edge. The editor/preview column next to it just fills whatever
@@ -138,6 +145,12 @@ export function DesignStep({
   function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    setLogoUploadError(null);
+    if (file.size > MAX_IMAGE_BYTES) {
+      setLogoUploadError("File is bigger than 5MB and can't be uploaded.");
+      e.target.value = "";
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       onThemeChange({
@@ -145,6 +158,30 @@ export function DesignStep({
         logo: { ...theme.logo, dataUrl: reader.result as string },
       });
     };
+    reader.onerror = () => setLogoUploadError("Couldn't read that file. Please try again.");
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  }
+
+  function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBannerUploadError(null);
+    if (file.size > MAX_IMAGE_BYTES) {
+      setBannerUploadError("File is bigger than 5MB and can't be uploaded.");
+      e.target.value = "";
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      // Resets zoom/pan on a fresh upload (replacing one banner with
+      // another shouldn't carry over the old image's crop).
+      onThemeChange({
+        ...theme,
+        banner: { ...DEFAULT_BANNER, dataUrl: reader.result as string },
+      });
+    };
+    reader.onerror = () => setBannerUploadError("Couldn't read that file. Please try again.");
     reader.readAsDataURL(file);
     e.target.value = "";
   }
@@ -152,6 +189,12 @@ export function DesignStep({
   function handleBgImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    setBgImageUploadError(null);
+    if (file.size > MAX_IMAGE_BYTES) {
+      setBgImageUploadError("File is bigger than 5MB and can't be uploaded.");
+      e.target.value = "";
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       onThemeChange({
@@ -162,6 +205,7 @@ export function DesignStep({
         },
       });
     };
+    reader.onerror = () => setBgImageUploadError("Couldn't read that file. Please try again.");
     reader.readAsDataURL(file);
     e.target.value = "";
   }
@@ -227,6 +271,43 @@ export function DesignStep({
           )}
         </div>
 
+        <div className="border-t border-royal-100 pt-4">
+          <label className="mb-1 block text-xs font-medium text-royal-700">
+            Banner (optional)
+          </label>
+          <p className="mb-1.5 text-xs text-royal-400">
+            A wide cover photo above the header — 1600×400px recommended (4:1).
+          </p>
+          <input
+            ref={bannerInputRef}
+            type="file"
+            accept={FORM_IMAGE_ACCEPT}
+            onChange={handleBannerUpload}
+            className="hidden"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => bannerInputRef.current?.click()}
+              className="flex-1 rounded-md border border-dashed border-royal-300 px-3 py-1.5 text-xs font-medium text-royal-600 hover:bg-royal-50"
+            >
+              {theme.banner.dataUrl ? "Replace banner" : "Upload banner"}
+            </button>
+            {theme.banner.dataUrl && (
+              <button
+                type="button"
+                onClick={() => onThemeChange({ ...theme, banner: DEFAULT_BANNER })}
+                className="rounded-md border border-royal-200 px-2 py-1.5 text-xs text-royal-500 hover:bg-royal-50"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+          {bannerUploadError && (
+            <p className="mt-1.5 text-xs font-medium text-red-600">{bannerUploadError}</p>
+          )}
+        </div>
+
         <div>
           <label className="mb-1 block text-xs font-medium text-royal-700">
             Header background color
@@ -284,6 +365,9 @@ export function DesignStep({
               </button>
             )}
           </div>
+          {logoUploadError && (
+            <p className="mt-1.5 text-xs font-medium text-red-600">{logoUploadError}</p>
+          )}
         </div>
 
         <div className="border-t border-royal-100 pt-4">
@@ -529,6 +613,9 @@ export function DesignStep({
               </button>
             )}
           </div>
+          {bgImageUploadError && (
+            <p className="mt-1.5 text-xs font-medium text-red-600">{bgImageUploadError}</p>
+          )}
 
           {theme.pageBackground.imageDataUrl && (
             <>
@@ -693,6 +780,18 @@ export function DesignStep({
       </div>
 
       <div className="flex w-full max-w-3xl flex-col gap-6">
+        {theme.banner.dataUrl && (
+          <div>
+            <p className="mb-2 text-xs font-medium text-royal-700">
+              Banner — drag to reposition, scroll the slider to zoom
+            </p>
+            <BannerImageFrame
+              banner={theme.banner}
+              onChange={(banner) => onThemeChange({ ...theme, banner })}
+            />
+          </div>
+        )}
+
         <div>
           <p className="mb-2 text-xs font-medium text-royal-700">
             Editor — drag elements to position them
