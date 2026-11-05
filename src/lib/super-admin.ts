@@ -3,6 +3,14 @@
 // immediately without a restart or rebuild. Never imported from a "use
 // client" file; see super-admin-actions.ts for the client-safe way to ask
 // "is the current user a super-admin."
+//
+// super-admins.txt lives in LOCAL_STORAGE_ROOT (on Railway: the /data
+// volume), never in git. Format — one Gmail username per line, just the
+// part before @gmail.com (it's added automatically; only Gmail addresses
+// are supported). Blank lines and lines starting with # are ignored:
+//
+//   # Owner
+//   codactics
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { LOCAL_STORAGE_ROOT } from "@/lib/storage-root";
@@ -14,8 +22,8 @@ function readSuperAdminEmails(): Set<string> {
   try {
     raw = readFileSync(ALLOWLIST_PATH, "utf-8");
   } catch {
-    // File missing entirely (e.g. a fresh clone before anyone copies
-    // super-admins.example.txt) — no super-admins, not a crash.
+    // File missing entirely (e.g. a fresh setup before anyone creates
+    // super-admins.txt) — no super-admins, not a crash.
     return new Set();
   }
   const usernames = raw

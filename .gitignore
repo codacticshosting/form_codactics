@@ -35,9 +35,9 @@ yarn-error.log*
 !.env.example
 
 # super-admin allowlist (which Gmail accounts see the Control panel) —
-# environment-specific, like the env files above
+# environment-specific, like the env files above; format documented in
+# src/lib/super-admin.ts
 super-admins.txt
-!super-admins.example.txt
 
 # vercel
 .vercel
