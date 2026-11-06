@@ -17,6 +17,7 @@ import {
   Star,
   Eye,
   EyeOff,
+  Download,
 } from "lucide-react";
 import {
   getFieldTypeDef,
@@ -41,6 +42,8 @@ import { DropdownOptionEditor } from "./DropdownOptionEditor";
 import { RankingItemEditor } from "./RankingItemEditor";
 import { SingleImageUploader } from "./SingleImageUploader";
 import { MarkdownContent } from "@/components/shared/MarkdownContent";
+import { AttachmentsEditor } from "./AttachmentsEditor";
+import { AttachmentList } from "@/components/shared/AttachmentList";
 
 export function FieldBlock({
   field,
@@ -107,6 +110,7 @@ export function FieldBlock({
               field.type !== "section-break" &&
               field.type !== "computed" &&
               field.type !== "image-display" &&
+              field.type !== "downloads" &&
               field.type !== "checklist" && (
               <Switch
                 checked={field.required}
@@ -159,7 +163,11 @@ export function FieldBlock({
           onChange={(e) => onChange({ ...field, label: e.target.value })}
           onClick={(e) => e.stopPropagation()}
           placeholder={
-            field.type === "section-break" ? "Section title" : "Question label"
+            field.type === "section-break"
+              ? "Section title"
+              : field.type === "downloads"
+                ? "Heading, e.g. Tournament documents"
+                : "Question label"
           }
           className="w-full border-b border-transparent bg-transparent pb-1 text-base font-medium text-royal-950 focus:border-royal-400 focus:outline-none"
         />
@@ -194,7 +202,8 @@ export function FieldBlock({
         field.type !== "computed" &&
         field.type !== "player-list" &&
         field.type !== "static-text" &&
-        field.type !== "image-display" && (
+        field.type !== "image-display" &&
+        field.type !== "downloads" && (
           <PopupSettings field={field} onChange={onChange} />
         )}
     </div>
@@ -973,6 +982,10 @@ function FieldPreview({
             onChange={(imageDataUrl) => onChange({ ...field, imageDataUrl })}
             label="Add an image (optional)"
           />
+          <AttachmentsEditor
+            attachments={field.attachments ?? []}
+            onChange={(attachments) => onChange({ ...field, attachments })}
+          />
           {(field.content || field.imageDataUrl) && (
             <div className="flex flex-col gap-2 rounded-lg border border-royal-100 bg-royal-50/40 p-3">
               <span className="block text-[11px] font-medium text-royal-400">
@@ -1005,6 +1018,22 @@ function FieldPreview({
           <MarkdownContent
             content={field.content || (field.imageDataUrl ? "" : "Write your message here.")}
           />
+          <AttachmentList attachments={field.attachments ?? []} />
+        </div>
+      );
+    case "downloads":
+      return editable ? (
+        <AttachmentsEditor
+          attachments={field.attachments}
+          onChange={(attachments) => onChange({ ...field, attachments })}
+          title="Files to download"
+        />
+      ) : field.attachments.length > 0 ? (
+        <AttachmentList attachments={field.attachments} />
+      ) : (
+        <div className="flex w-full items-center gap-2 rounded-md border border-dashed border-royal-200 bg-royal-50/40 px-3 py-4 text-royal-400">
+          <Download size={16} />
+          <span className="text-sm">No files attached yet — click to add images or PDFs</span>
         </div>
       );
     case "image-display":

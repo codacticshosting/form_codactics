@@ -24,6 +24,7 @@ import { DEFAULT_THEME, normalizeTheme, type FormTheme } from "@/types/theme";
 import { DEFAULT_CLOSING, type FormClosing } from "@/types/closing";
 import { FieldPalette } from "@/components/builder/FieldPalette";
 import { FormCanvas } from "@/components/builder/FormCanvas";
+import { BuilderFormIdContext } from "@/components/builder/BuilderFormContext";
 import { FormRenderer } from "@/components/form/FormRenderer";
 import { DesignStep } from "@/components/design/DesignStep";
 import { PageBackground } from "@/components/design/PageBackground";
@@ -607,15 +608,17 @@ function NewFormPageInner() {
                 {paletteOpen ? <PanelLeftClose size={14} /> : <PanelLeftOpen size={14} />}
                 {paletteOpen ? "Hide panel" : "Show panel"}
               </button>
-              <FormCanvas
-                fields={fields}
-                selectedId={selectedId}
-                onSelect={setSelectedId}
-                onChange={updateField}
-                onDelete={deleteField}
-                insertionTargetId={insertionTargetId}
-                accessUsernames={accessUsernames}
-              />
+              <BuilderFormIdContext.Provider value={formId ?? null}>
+                <FormCanvas
+                  fields={fields}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                  onChange={updateField}
+                  onDelete={deleteField}
+                  insertionTargetId={insertionTargetId}
+                  accessUsernames={accessUsernames}
+                />
+              </BuilderFormIdContext.Provider>
             </div>
           </main>
 

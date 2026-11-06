@@ -51,6 +51,7 @@ import {
 } from "@/lib/storage-limits";
 import { compressPhoto, replaceInputFile } from "@/lib/compress-photo";
 import { SITE_URL } from "@/lib/site-config";
+import { AttachmentList } from "@/components/shared/AttachmentList";
 import { SignaturePad } from "./SignaturePad";
 import { DrawingPad } from "./DrawingPad";
 import { DesignBoardInput } from "./DesignBoardInput";
@@ -365,7 +366,8 @@ function buildReviewSections(
         if (
           field.type === "static-text" ||
           field.type === "section-break" ||
-          field.type === "image-display"
+          field.type === "image-display" ||
+          field.type === "downloads"
         ) {
           continue;
         }
@@ -1304,6 +1306,8 @@ function FieldRenderer({ field }: { field: FormField }) {
       return <ButtonFieldRenderer field={field} />;
     case "static-text":
       return <StaticTextRenderer field={field} />;
+    case "downloads":
+      return <DownloadsRenderer field={field} />;
     case "image-display":
       return <ImageDisplayRenderer field={field} />;
     case "checklist":
@@ -2388,7 +2392,8 @@ function StaticTextRenderer({
   field: Extract<FormField, { type: "static-text" }>;
 }) {
   const [zoomed, setZoomed] = useState<{ url: string; alt: string } | null>(null);
-  if (!field.content && !field.imageDataUrl) return null;
+  const attachments = field.attachments ?? [];
+  if (!field.content && !field.imageDataUrl && attachments.length === 0) return null;
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-royal-100 bg-royal-50/60 p-5">
       {field.imageDataUrl && (
@@ -2403,7 +2408,22 @@ function StaticTextRenderer({
       {field.content && (
         <MarkdownContent content={field.content} color={field.color} />
       )}
+      <AttachmentList attachments={attachments} />
       <ImageZoomModal image={zoomed} onClose={() => setZoomed(null)} />
+    </div>
+  );
+}
+
+function DownloadsRenderer({
+  field,
+}: {
+  field: Extract<FormField, { type: "downloads" }>;
+}) {
+  if (field.attachments.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-royal-100 bg-white p-5 shadow-sm">
+      {field.label && <p className="text-sm font-medium text-royal-950">{field.label}</p>}
+      <AttachmentList attachments={field.attachments} />
     </div>
   );
 }

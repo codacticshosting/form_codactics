@@ -9,11 +9,14 @@ import {
 } from "@/lib/google";
 import { saveFormImagesLocally } from "@/lib/local-storage";
 import { checkStorageCapacity } from "@/lib/storage-quota";
+import { withSanitizedAttachments } from "@/lib/attachments";
 import {
+  copyFormFiles,
   estimateStoredFormBytes,
   inlineForeignAssets,
   refreshFormStorageBytes,
   removeUnusedFormAssets,
+  removeUnusedFormFiles,
 } from "@/lib/storage-usage";
 import { slugify } from "@/lib/slug";
 import { generateUniqueTitle } from "@/lib/form-naming";
@@ -171,6 +174,8 @@ export async function updateDraft(
 
   const rawTitle = sanitizeTitle(input.title) || "Untitled";
   const title = await generateUniqueTitle(session.user.id, rawTitle, formId);
+  // Only this form's own uploaded files may be attached.
+  input = { ...input, fields: withSanitizedAttachments(input.fields, formId) };
 
   await prisma.form.update({
     where: { id: formId },
@@ -184,6 +189,7 @@ export async function updateDraft(
   });
   // A draft keeps its images embedded as base64 in the schema/theme, so
   // its size changes with every image added or removed in the builder.
+  await removeUnusedFormFiles(formId);
   await refreshFormStorageBytes(formId);
 
   return { ok: true, title };
@@ -253,6 +259,9 @@ export async function updateLiveForm(
     return { ok: false, error: "not-found" };
   }
 
+  // Only this form's own uploaded files may be attached.
+  input = { ...input, fields: withSanitizedAttachments(input.fields, formId) };
+
   if (existing.storageProvider === "local") {
     const growth = await formGrowthBeyondCapacity(session.user.id, existing, input);
     if (growth) return { ok: false, error: "storage-full" };
@@ -312,6 +321,7 @@ export async function updateLiveForm(
   // Only now that the new schema/theme is saved — an image replaced in
   // this edit (e.g. a new logo) leaves its old file unreferenced.
   if (existing.storageProvider === "local") await removeUnusedFormAssets(formId);
+  await removeUnusedFormFiles(formId);
   await refreshFormStorageBytes(formId);
 
   return { ok: true, title };
@@ -716,6 +726,11 @@ export async function duplicateForm(formId: string): Promise<DuplicateFormResult
       compressPhotos: source.compressPhotos,
     },
   });
+  // Attached files are copied into the copy's own folder, too.
+  const copiedSchema = await copyFormFiles(form.schema, source.id, form.id);
+  if (copiedSchema !== form.schema) {
+    await prisma.form.update({ where: { id: form.id }, data: { schema: copiedSchema } });
+  }
   await refreshFormStorageBytes(form.id);
 
   return { ok: true, formId: form.id };
@@ -783,6 +798,10 @@ export async function publishForm(input: {
       return { ok: false, error: "publish-limit" };
     }
   }
+
+  // Only this form's own uploaded files may be attached (a brand-new
+  // form can't have any yet).
+  input = { ...input, fields: withSanitizedAttachments(input.fields, existing?.id ?? null) };
 
   if (input.storage === "local") {
     const growth = await formGrowthBeyondCapacity(admin.id, existing, input);
@@ -855,6 +874,7 @@ export async function publishForm(input: {
     });
     await removeUnusedFormAssets(formId);
   }
+  await removeUnusedFormFiles(formId);
   await refreshFormStorageBytes(formId);
 
   return { ok: true, slug };

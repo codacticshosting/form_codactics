@@ -2,10 +2,11 @@
 // measures or frees this server's own disk space: keeping the tracked
 // sizes (Form.storageBytes, Submission.sizeBytes) current, removing files
 // once nothing uses them, and the super-admin recalculate/clean-up pass.
-import { readdir, readFile, rm, stat } from "node:fs/promises";
+import { copyFile, mkdir, readdir, readFile, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { prisma } from "@/lib/prisma";
-import { SCHEMA_ASSETS_ROOT, UPLOADS_ROOT } from "@/lib/local-storage";
+import { FORM_FILES_ROOT, SCHEMA_ASSETS_ROOT, UPLOADS_ROOT } from "@/lib/local-storage";
+import { attachmentFileName, attachmentUrl } from "@/lib/attachments";
 import { IMAGE_EXT_TO_CONTENT_TYPE, resolveSafePath } from "@/lib/media-utils";
 
 // Total size of every file under `dir`, recursively — 0 if it doesn't
@@ -56,8 +57,11 @@ export async function refreshFormStorageBytes(formId: string): Promise<number> {
   });
   if (!form) return 0;
   const assetsDir = resolveSafePath(SCHEMA_ASSETS_ROOT, formId);
+  const filesDir = resolveSafePath(FORM_FILES_ROOT, formId);
   const bytes =
-    definitionBytes(form.schema, form.theme) + (assetsDir ? await dirSize(assetsDir) : 0);
+    definitionBytes(form.schema, form.theme) +
+    (assetsDir ? await dirSize(assetsDir) : 0) +
+    (filesDir ? await dirSize(filesDir) : 0);
   await prisma.form.update({ where: { id: formId }, data: { storageBytes: bytes } });
   return bytes;
 }
@@ -166,8 +170,65 @@ export async function removeFormFiles(formId: string): Promise<number> {
 
   return (
     (await removePath(resolveSafePath(UPLOADS_ROOT, formId))) +
-    (await removePath(resolveSafePath(SCHEMA_ASSETS_ROOT, formId)))
+    (await removePath(resolveSafePath(SCHEMA_ASSETS_ROOT, formId))) +
+    (await removePath(resolveSafePath(FORM_FILES_ROOT, formId)))
   );
+}
+
+// How long a just-uploaded attachment is safe from removeUnusedFormFiles.
+// Files are uploaded the moment they're picked, but only referenced in
+// the form once the builder's next autosave lands — an autosave already
+// in flight (carrying the older form) mustn't sweep them away meanwhile.
+const ATTACHMENT_GRACE_MS = 60 * 60 * 1000;
+
+// Deletes attachment files the form no longer references (removed in the
+// builder, or uploaded and never saved), once they're past the grace
+// period. Returns bytes freed.
+export async function removeUnusedFormFiles(formId: string, now = Date.now()): Promise<number> {
+  const dir = resolveSafePath(FORM_FILES_ROOT, formId);
+  if (!dir) return 0;
+  let fileNames: string[];
+  try {
+    fileNames = await readdir(dir);
+  } catch {
+    return 0;
+  }
+  const form = await prisma.form.findUnique({ where: { id: formId }, select: { schema: true } });
+  const schema = form?.schema ?? "";
+  let freed = 0;
+  for (const fileName of fileNames) {
+    if (schema.includes(attachmentUrl(formId, fileName))) continue;
+    const filePath = path.join(dir, fileName);
+    const info = await stat(filePath).catch(() => null);
+    if (info && now - info.mtimeMs > ATTACHMENT_GRACE_MS) freed += await removePath(filePath);
+  }
+  return freed;
+}
+
+// For a duplicated form: copies the source form's attachment files that
+// `json` references into the copy's own folder and points the references
+// there, so the copy never depends on files deleted along with the source.
+export async function copyFormFiles(json: string, sourceFormId: string, targetFormId: string): Promise<string> {
+  const sourcePrefix = attachmentUrl(sourceFormId, "");
+  if (!json.includes(sourcePrefix)) return json;
+  const targetDir = resolveSafePath(FORM_FILES_ROOT, targetFormId);
+  if (!targetDir) return json;
+  await mkdir(targetDir, { recursive: true });
+  let result = json;
+  const pattern = new RegExp(`${sourcePrefix.replace(/[/]/g, "\\/")}[0-9a-f-]{36}\\.[a-z]+`, "g");
+  for (const url of new Set(json.match(pattern) ?? [])) {
+    const fileName = attachmentFileName(url, sourceFormId);
+    const sourcePath = fileName ? resolveSafePath(FORM_FILES_ROOT, sourceFormId, fileName) : null;
+    if (!fileName || !sourcePath) continue;
+    try {
+      await copyFile(sourcePath, path.join(targetDir, fileName));
+      result = result.split(url).join(attachmentUrl(targetFormId, fileName));
+    } catch {
+      // Source file already gone — leave the reference; it's dropped as
+      // invalid the next time the copy is saved.
+    }
+  }
+  return result;
 }
 
 export async function removeSubmissionFiles(formId: string, submissionId: string): Promise<number> {
@@ -230,7 +291,18 @@ export async function recalculateAllStorage(): Promise<RecalculateStorageResult>
       result.leftoversRemoved += 1;
     }
   }
+  for (const dirName of await listDirNames(FORM_FILES_ROOT)) {
+    if (!formIds.has(dirName)) {
+      result.bytesFreed += await removePath(resolveSafePath(FORM_FILES_ROOT, dirName));
+      result.leftoversRemoved += 1;
+    }
+  }
   for (const form of forms) {
+    const freedFiles = await removeUnusedFormFiles(form.id);
+    if (freedFiles > 0) {
+      result.bytesFreed += freedFiles;
+      result.leftoversRemoved += 1;
+    }
     const freed = await removeUnusedFormAssets(form.id);
     if (freed > 0) {
       result.bytesFreed += freed;

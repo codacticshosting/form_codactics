@@ -1,3 +1,5 @@
+import type { FormAttachment } from "@/lib/attachments";
+
 export type FieldType =
   | "short-text"
   | "long-text"
@@ -23,7 +25,8 @@ export type FieldType =
   | "ranking"
   | "drawing"
   | "design-board"
-  | "code";
+  | "code"
+  | "downloads";
 
 export interface FieldPopup {
   enabled: boolean;
@@ -142,6 +145,15 @@ export interface StaticTextField extends FieldBase {
   content: string;
   color?: string;
   imageDataUrl?: string;
+  // Images/PDFs offered for download under the message.
+  attachments?: FormAttachment[];
+}
+
+// A list of images/PDFs for respondents to download (rules, timetables,
+// templates…) — the label is shown as its heading; nothing to fill in.
+export interface DownloadsField extends FieldBase {
+  type: "downloads";
+  attachments: FormAttachment[];
 }
 
 // A pure image block for the public form — banners, flyers, sponsor logos —
@@ -299,4 +311,5 @@ export type FormField =
   | RankingField
   | DrawingField
   | DesignBoardField
-  | CodeField;
+  | CodeField
+  | DownloadsField;

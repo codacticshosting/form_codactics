@@ -43,6 +43,11 @@ export const UPLOADS_ROOT = path.join(LOCAL_STORAGE_ROOT, "data", "uploads");
 // anyone viewing the live form. Exported for the same reason as above.
 export const SCHEMA_ASSETS_ROOT = path.join(LOCAL_STORAGE_ROOT, "data", "schema-assets");
 
+// Files an admin attaches for respondents to download (Message/Downloads
+// fields, see src/lib/attachments.ts) — one folder per form, kept on this
+// server whatever storage the form's responses use.
+export const FORM_FILES_ROOT = path.join(LOCAL_STORAGE_ROOT, "data", "form-files");
+
 // Dropdown option thumbnails, Button images, Message/Image field pictures,
 // and the theme's own logo/background/canvas images are all saved as
 // base64 data URLs in the builder (so editing works before the form is

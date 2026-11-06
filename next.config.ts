@@ -67,12 +67,16 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: securityHeaders,
       },
-      // Admin-uploaded form images, and images proxied for the PDF export:
-      // only ever images, never pages, so no script at all — this must
-      // come last, because the page policy above (which allows inline
-      // script) would otherwise replace it. An old SVG with script inside,
-      // opened directly in a tab, stays inert.
-      ...["/api/forms/:formId/schema-assets/:path*", "/api/pdf-image-proxy"].map((source) => ({
+      // Admin-uploaded form images and download attachments, and images
+      // proxied for the PDF export: only ever files, never pages, so no
+      // script at all — this must come last, because the page policy
+      // above (which allows inline script) would otherwise replace it. An
+      // old SVG with script inside, opened directly in a tab, stays inert.
+      ...[
+        "/api/forms/:formId/schema-assets/:path*",
+        "/api/forms/:formId/files/:path*",
+        "/api/pdf-image-proxy",
+      ].map((source) => ({
         source,
         headers: [
           { key: "Content-Security-Policy", value: IMAGE_ONLY_POLICY },

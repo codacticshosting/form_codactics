@@ -24,6 +24,7 @@ import {
   Paintbrush,
   Layers,
   Code2,
+  Download,
   type LucideIcon,
 } from "lucide-react";
 import type {
@@ -288,6 +289,20 @@ export const FIELD_TYPE_DEFS: FieldTypeDef[] = [
       label: "",
       required: false,
       content: "Write your message here.",
+    }),
+  },
+  {
+    type: "downloads",
+    label: "Downloads",
+    description: "Share PDFs or images for people to download",
+    icon: Download,
+    producesDataColumn: false,
+    create: () => ({
+      id: createId(),
+      type: "downloads",
+      label: "Downloads",
+      required: false,
+      attachments: [],
     }),
   },
   {
