@@ -25,6 +25,7 @@ import {
   Layers,
   Code2,
   Download,
+  Upload,
   type LucideIcon,
 } from "lucide-react";
 import type {
@@ -170,6 +171,18 @@ export const FIELD_TYPE_DEFS: FieldTypeDef[] = [
     create: () => ({
       id: createId(),
       type: "photo",
+      label: "Untitled question",
+      required: false,
+    }),
+  },
+  {
+    type: "file-upload",
+    label: "File upload",
+    description: "One photo, PDF, Word, Excel or PowerPoint file, e.g. payment proof",
+    icon: Upload,
+    create: () => ({
+      id: createId(),
+      type: "file-upload",
       label: "Untitled question",
       required: false,
     }),

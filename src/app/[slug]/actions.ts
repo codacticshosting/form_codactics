@@ -16,6 +16,8 @@ import {
   STORAGE_FULL_SUBMIT_MESSAGE,
 } from "@/lib/storage-limits";
 import { checkStorageCapacity } from "@/lib/storage-quota";
+import { FILE_UPLOAD_TYPES_LABEL, isAllowedFileUploadName } from "@/lib/file-upload";
+import { fileContentMatchesName } from "@/lib/file-upload-check";
 
 // A submission this fast essentially can't be a human who actually read
 // and filled the form.
@@ -102,6 +104,34 @@ export async function submitFormAction(
     }
   }
 
+  const fields = JSON.parse(form.schema) as FormField[];
+
+  // File upload fields: one file, and it must really be an allowed type.
+  // The browser only offers these, but a request can be sent without it.
+  for (const field of fields) {
+    if (field.type !== "file-upload") continue;
+    const files = formData
+      .getAll(field.id)
+      .filter((value): value is File => value instanceof File && value.size > 0);
+    if (files.length > 1) {
+      return {
+        status: "error",
+        message: "Your response was not submitted: only one file can be uploaded per field.",
+      };
+    }
+    const [file] = files;
+    if (
+      file &&
+      (!isAllowedFileUploadName(file.name) ||
+        !fileContentMatchesName(file.name, Buffer.from(await file.arrayBuffer())))
+    ) {
+      return {
+        status: "error",
+        message: `Your response was not submitted: "${file.name}" isn't a valid ${FILE_UPLOAD_TYPES_LABEL} file.`,
+      };
+    }
+  }
+
   // Unlike the bot signals above, this is a real possibility for genuine
   // visitors (retrying after an error, a shared office/campus IP) — worth
   // an honest message rather than a silent drop.
@@ -135,8 +165,6 @@ export async function submitFormAction(
     }
     accessUsername = verified.username;
   }
-
-  const fields = JSON.parse(form.schema) as FormField[];
 
   if (form.storageProvider === "local") {
     const incoming = incomingSubmissionBytes(formData);

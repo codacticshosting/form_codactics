@@ -214,6 +214,7 @@ async function extractTopLevelValue(
   switch (field.type) {
     case "photo":
     case "document":
+    case "file-upload":
       return extractFileAnswer(formData, field.id, formId, submissionId);
     case "signature": {
       const raw = formData.get(field.id);

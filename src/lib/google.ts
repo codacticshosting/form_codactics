@@ -442,7 +442,8 @@ async function extractTopLevelValue(
 ): Promise<string> {
   switch (field.type) {
     case "photo":
-    case "document": {
+    case "document":
+    case "file-upload": {
       const file = formData.get(field.id);
       if (!(file instanceof File) || file.size === 0) return "";
       const buffer = Buffer.from(await file.arrayBuffer());

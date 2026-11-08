@@ -18,6 +18,7 @@ import {
   Eye,
   EyeOff,
   Download,
+  Upload,
 } from "lucide-react";
 import {
   getFieldTypeDef,
@@ -43,6 +44,7 @@ import { RankingItemEditor } from "./RankingItemEditor";
 import { SingleImageUploader } from "./SingleImageUploader";
 import { MarkdownContent } from "@/components/shared/MarkdownContent";
 import { AttachmentsEditor } from "./AttachmentsEditor";
+import { MAX_UPLOAD_LABEL } from "@/lib/storage-limits";
 import { AttachmentList } from "@/components/shared/AttachmentList";
 
 export function FieldBlock({
@@ -489,6 +491,13 @@ function FieldPreview({
         <div className="flex w-full max-w-xs items-center gap-2 rounded-md border border-dashed border-royal-200 bg-royal-50/40 px-3 py-4 text-royal-400">
           <FileText size={16} />
           <span className="text-sm">Click or drop file to upload</span>
+        </div>
+      );
+    case "file-upload":
+      return (
+        <div className="flex w-full max-w-sm items-center gap-2 rounded-md border border-dashed border-royal-200 bg-royal-50/40 px-3 py-4 text-royal-400">
+          <Upload size={16} className="shrink-0" />
+          <span className="text-sm">One photo, PDF, Word, Excel or PPTX file, up to {MAX_UPLOAD_LABEL}</span>
         </div>
       );
     case "code":

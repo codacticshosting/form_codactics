@@ -740,7 +740,7 @@ export function DesignStep({
         <div className="border-t border-royal-100 pt-4">
           <label className="mb-1 block text-xs font-medium text-royal-700">Photo uploads</label>
           <p className="mb-2 text-xs text-royal-400">
-            Applies to photo fields (including photos in repeating lists and buttons).
+            Applies to photo fields (including photos in repeating lists and buttons) and photos sent through File upload fields.
           </p>
           <PhotoOptimizationOption checked={compressPhotos} onChange={onCompressPhotosChange} />
         </div>

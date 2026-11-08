@@ -11,7 +11,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Image, FileText, Check, CircleCheck, CircleAlert, Star, X, GripVertical } from "lucide-react";
+import { Image, FileText, Upload, Check, CircleCheck, CircleAlert, Star, X, GripVertical } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -50,6 +50,11 @@ import {
   STORAGE_FILE_WONT_FIT_HINT,
 } from "@/lib/storage-limits";
 import { compressPhoto, replaceInputFile } from "@/lib/compress-photo";
+import {
+  FILE_UPLOAD_ACCEPT,
+  FILE_UPLOAD_TYPES_LABEL,
+  isAllowedFileUploadName,
+} from "@/lib/file-upload";
 import { SITE_URL } from "@/lib/site-config";
 import { AttachmentList } from "@/components/shared/AttachmentList";
 import { SignaturePad } from "./SignaturePad";
@@ -255,7 +260,8 @@ function reviewValueForField(field: FormField, formData: FormData): ReviewValue 
       return { kind: "text", text: resolved || "—" };
     }
     case "photo":
-    case "document": {
+    case "document":
+    case "file-upload": {
       const file = formData.get(field.id);
       return {
         kind: "text",
@@ -1205,6 +1211,12 @@ function FieldRenderer({ field }: { field: FormField }) {
           <DocumentUploadInput name={field.id} required={field.required} />
         </FieldCard>
       );
+    case "file-upload":
+      return (
+        <FieldCard field={field}>
+          <FileUploadInput name={field.id} required={field.required} />
+        </FieldCard>
+      );
     case "code":
       return (
         <FieldCard field={field}>
@@ -1823,6 +1835,91 @@ function PhotoUploadInput({
           className="hidden"
         />
       </label>
+      {optimizing && <p className="text-xs font-medium text-royal-500">Optimizing photo…</p>}
+      {fileName && (
+        <p className="flex items-center gap-1.5 text-xs font-medium text-green-600">
+          <Check size={12} />
+          Uploaded: {fileName}
+        </p>
+      )}
+      {error && <p className="text-xs font-medium text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+function FileUploadInput({
+  required,
+  name,
+}: {
+  required: boolean;
+  name?: string;
+}) {
+  const [fileName, setFileName] = useState<string | null>(null);
+  const checkUploadFit = useUploadFitCheck();
+  const preparePhoto = usePreparePhoto();
+  const [optimizing, setOptimizing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const input = e.target;
+    const picked = input.files?.[0];
+    setError(null);
+    setFileName(null);
+    if (!picked) return;
+    if (!isAllowedFileUploadName(picked.name)) {
+      setError(`Please upload a ${FILE_UPLOAD_TYPES_LABEL} file.`);
+      input.value = "";
+      return;
+    }
+    // Only photos change here; every other file comes back as it is.
+    setOptimizing(true);
+    const file = await preparePhoto(input, picked);
+    setOptimizing(false);
+    if (!file) return;
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setError(FILE_TOO_LARGE);
+      input.value = "";
+      return;
+    }
+    setFileName(file.name);
+    checkUploadFit(input, file, (message) => {
+      setFileName(null);
+      setError(message);
+    });
+  }
+
+  useEffect(() => {
+    const formEl = inputRef.current?.closest("form");
+    if (!formEl) return;
+    const handleReset = () => {
+      setFileName(null);
+      setError(null);
+    };
+    formEl.addEventListener("reset", handleReset);
+    return () => formEl.removeEventListener("reset", handleReset);
+  }, []);
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-royal-300 bg-royal-50/40 px-4 py-6 text-royal-500 transition-colors hover:bg-royal-50">
+        <Upload size={18} className="shrink-0" />
+        <span className="text-sm">
+          {fileName ? "Click to replace file" : "Click to upload a file"}
+        </span>
+        <input
+          ref={inputRef}
+          type="file"
+          name={name}
+          accept={FILE_UPLOAD_ACCEPT}
+          required={required}
+          onChange={handleChange}
+          className="hidden"
+        />
+      </label>
+      <p className="text-xs text-royal-400">
+        One {FILE_UPLOAD_TYPES_LABEL} file, up to {MAX_UPLOAD_LABEL}.
+      </p>
       {optimizing && <p className="text-xs font-medium text-royal-500">Optimizing photo…</p>}
       {fileName && (
         <p className="flex items-center gap-1.5 text-xs font-medium text-green-600">

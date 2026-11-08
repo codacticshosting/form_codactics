@@ -15,6 +15,7 @@ export type FieldType =
   | "date"
   | "multiple-choice"
   | "document"
+  | "file-upload"
   | "signature"
   | "section-break"
   | "rating"
@@ -192,6 +193,12 @@ export interface DocumentField extends FieldBase {
   type: "document";
 }
 
+// One file of any common kind — a photo, PDF, Word, Excel or PowerPoint
+// file — for answers that could arrive in several forms, e.g. payment proof.
+export interface FileUploadField extends FieldBase {
+  type: "file-upload";
+}
+
 // A monospace code box. `languages` holds ids from CODE_LANGUAGES
 // (lib/field-types.ts): one entry locks the field to that language with no
 // picker shown; several lets the respondent pick which one they're
@@ -301,6 +308,7 @@ export type FormField =
   | DateField
   | MultipleChoiceField
   | DocumentField
+  | FileUploadField
   | SignatureField
   | SectionBreakField
   | RatingField

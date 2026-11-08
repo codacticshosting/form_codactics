@@ -657,7 +657,7 @@ function NewFormPageInner() {
 function formCollectsFiles(fields: FormField[]): boolean {
   return fields.some(
     (field) =>
-      ["photo", "document", "signature", "drawing", "design-board"].includes(field.type) ||
+      ["photo", "document", "file-upload", "signature", "drawing", "design-board"].includes(field.type) ||
       (field.type === "player-list" && field.columns.some((c) => c.type === "photo")) ||
       (field.type === "button" && field.fields.some((c) => c.type === "photo")),
   );
@@ -668,6 +668,7 @@ function formCollectsPhotos(fields: FormField[]): boolean {
   return fields.some(
     (field) =>
       field.type === "photo" ||
+      field.type === "file-upload" ||
       (field.type === "player-list" && field.columns.some((c) => c.type === "photo")) ||
       (field.type === "button" && field.fields.some((c) => c.type === "photo")),
   );
